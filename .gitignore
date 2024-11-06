@@ -1,3 +1,5 @@
 datasets
-predictions
+marianmt_predictions
+mbart_predictions
+nllb_predictions
 .venv
