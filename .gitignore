@@ -11,3 +11,5 @@ wmttest2022.AnnA.en
 wmttest2022.zh
 *.txt
 *.en
+fine_tuned_model/
+results/

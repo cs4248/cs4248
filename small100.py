@@ -3,8 +3,12 @@ from transformers import AutoTokenizer, M2M100ForConditionalGeneration, pipeline
 from datasets import Dataset
 import argparse
 
-model = M2M100ForConditionalGeneration.from_pretrained("alirezamsh/small100").to("cuda")
-tokenizer = AutoTokenizer.from_pretrained("alirezamsh/small100")
+# USE THE FIRST MODEL_DIR IF YOU CREATED one using small100_finetune.py
+# model_dir = "./fine_tuned_model"
+model_dir = "alirezamsh/small100"
+
+model = M2M100ForConditionalGeneration.from_pretrained(model_dir).to("cuda")
+tokenizer = AutoTokenizer.from_pretrained(model_dir)
 tokenizer.tgt_lang = "en"
 
 def translate_file(file_path, output_path):
