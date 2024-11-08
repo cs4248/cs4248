@@ -1,15 +1,13 @@
+# Directories for datasets and predictions
 datasets
 marianmt_predictions
 mbart_predictions
 nllb_predictions
+t5_predictions
+
+# Directory for model
+models
+
+# Python related files
 .venv
-tatoeba.en
-tatoeba.zh
-train.zh-en.en
-train.zh-en.zh
-wmttest2022.AnnA.en
-wmttest2022.zh
-*.txt
-*.en
-fine_tuned_model/
-results/
+__pycache__
