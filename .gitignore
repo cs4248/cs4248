@@ -3,3 +3,5 @@ marianmt_predictions
 mbart_predictions
 nllb_predictions
 .venv
+__pycache__
+*.pt

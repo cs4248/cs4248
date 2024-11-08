@@ -33,13 +33,15 @@ class MoEDataset(Dataset):
         self.__init__(raw_texts, raw_labels, tokenizer)
 
     def __init__(self, raw_texts, raw_labels, tokenizer, max_length=128):
-        self.texts = tokenizer(
+        model_inputs = tokenizer(
             text=raw_texts,
             max_length=max_length, 
             truncation=True, 
             padding=True, 
             return_tensors="pt"
-        )["input_ids"]
+        )
+        self.texts = model_inputs["input_ids"]
+        self.masks = model_inputs["attention_mask"]
         self.labels = [int(label) for label in raw_labels]
 
     def __len__(self):
@@ -47,10 +49,11 @@ class MoEDataset(Dataset):
     
     def __getitem__(self, idx):
         text = self.texts[idx]
+        mask = self.masks[idx]
         lab = None
-        if self.lab:
+        if self.labels:
             lab = self.labels[idx]
-        return text, lab
+        return {"input_ids": text, "attention_mask": mask, "labels": lab}
 
 '''
 lab_paths: list of str
@@ -62,7 +65,7 @@ def get_raw_moe_dataset(text_paths, lab_path, pred_paths):
     raw_preds = [read_file(pred_path) for pred_path in pred_paths]
     raw_labels = read_file(lab_path)
     bleu_scores = [[compute_single_bleu_score(pair[0], pair[1]) for pair in zip(preds, raw_labels)] for preds in raw_preds]
-    moe_labels = [scores.index(max(scores)) + 1 for scores in zip(*bleu_scores)]
+    moe_labels = [scores.index(max(scores)) for scores in zip(*bleu_scores)]
     return raw_texts, moe_labels
 
 def compute_single_bleu_score(pred, lab):
