@@ -3,3 +3,11 @@ marianmt_predictions
 mbart_predictions
 nllb_predictions
 .venv
+tatoeba.en
+tatoeba.zh
+train.zh-en.en
+train.zh-en.zh
+wmttest2022.AnnA.en
+wmttest2022.zh
+*.txt
+*.en
