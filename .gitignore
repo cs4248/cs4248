@@ -1,8 +1,13 @@
+# Directories for datasets and predictions
 datasets
 marianmt_predictions
 mbart_predictions
 nllb_predictions
 t5_predictions
+
+# Directory for model
+models
+
+# Python related files
 .venv
 __pycache__
-*.pt
