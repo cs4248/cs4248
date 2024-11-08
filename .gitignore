@@ -2,6 +2,7 @@ datasets
 marianmt_predictions
 mbart_predictions
 nllb_predictions
+t5_predictions
 .venv
 __pycache__
 *.pt

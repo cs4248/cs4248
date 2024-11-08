@@ -1,8 +1,7 @@
 import argparse
-import evaluate
 from torch.utils.data import Dataset
 
-metric = evaluate.load("sacrebleu")
+from utils import compute_single_bleu_score, read_file
 
 class MoEDataset(Dataset):
     '''
@@ -67,13 +66,6 @@ def get_raw_moe_dataset(text_paths, lab_path, pred_paths):
     bleu_scores = [[compute_single_bleu_score(pair[0], pair[1]) for pair in zip(preds, raw_labels)] for preds in raw_preds]
     moe_labels = [scores.index(max(scores)) for scores in zip(*bleu_scores)]
     return raw_texts, moe_labels
-
-def compute_single_bleu_score(pred, lab):
-    return metric.compute(predictions=[pred], references=[[lab]])["score"]
-
-def read_file(file_path):
-    with open(file_path, "r", encoding="utf-8") as file: 
-        return file.read().splitlines()
 
 def write_label_file(file_path, labels):
     with open(file_path, "w", encoding="utf-8") as file:
