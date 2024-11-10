@@ -1,17 +1,33 @@
 import torch
 from transformers import AutoTokenizer, M2M100ForConditionalGeneration, Trainer, TrainingArguments
 from datasets import Dataset
+from peft import LoraConfig, TaskType, get_peft_model
+
 import argparse
 
-FINE_TUNE_DATASET_SIZE = 100
+FINE_TUNE_DATASET_SIZE = 15000
 NUM_TRAIN_EPOCHS = 3
 train_text_path = 'train.zh-en.zh'
 train_label_path = 'train.zh-en.en'
 
-
 model = M2M100ForConditionalGeneration.from_pretrained("alirezamsh/small100").to("cuda")
 tokenizer = AutoTokenizer.from_pretrained("alirezamsh/small100")
 tokenizer.tgt_lang = "en"
+
+target_modules= [
+    # "q_proj",
+    # "k_proj",
+    # "v_proj",
+    # "o_proj",
+    # "gate_proj",
+    # "up_proj",
+    # "down_proj",
+    "lm_head",
+]
+peft_config = LoraConfig(task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=8, lora_alpha=32, lora_dropout=0.1,target_modules=target_modules)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+
 
 with open(train_text_path, "r", encoding="utf-8") as train_file, \
     open(train_label_path, "r", encoding="utf-8") as test_file:
