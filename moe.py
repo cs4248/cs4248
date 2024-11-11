@@ -24,7 +24,7 @@ def train(text_path, label_path):
   texts = read_file(text_path)
   labels = read_file(label_path)
 
-  model = AutoModelForSequenceClassification.from_pretrained(checkpoint, num_labels=2)
+  model = AutoModelForSequenceClassification.from_pretrained(checkpoint, num_labels=3)
   peft_config = LoraConfig(
       r=16,
       lora_alpha=32,
