@@ -5,6 +5,7 @@ mbart_predictions
 nllb_predictions
 small100_predictions
 t5_predictions
+other_predictions
 
 # Directory for model
 models
