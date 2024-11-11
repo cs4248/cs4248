@@ -1,12 +1,10 @@
 # Directories for datasets and predictions
 datasets
-marianmt_predictions
-mbart_predictions
-nllb_predictions
-t5_predictions
+*predictions
 
 # Directory for model
 models
+*.pt
 
 # Python related files
 .venv

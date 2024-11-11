@@ -1,16 +1,17 @@
 from transformers import DataCollatorForSeq2Seq, AutoModelForSeq2SeqLM, AutoTokenizer, Trainer, TrainingArguments
 from peft import get_peft_model, LoraConfig, TaskType
-from datasets import Dataset
 from utils import read_file
+from datasets import Dataset
 import argparse
 import evaluate
 import torch
 import numpy as np 
 
 MAX_INPUT_LENGTH = 64
-checkpoint = "Helsinki-NLP/opus-mt-zh-en"
+checkpoint = "facebook/nllb-200-distilled-600M"
 metric = evaluate.load("sacrebleu")
-tokenizer = AutoTokenizer.from_pretrained(checkpoint, return_tensors="pt")
+tokenizer = AutoTokenizer.from_pretrained(checkpoint, src_lang="zho_Hans", tgt_lang="eng_Latn")
+
 
 def tokenize_function(sentences):
     model_inputs = tokenizer(sentences["zh"], text_target=sentences["en"], padding="max_length", truncation=True, max_length=MAX_INPUT_LENGTH)
@@ -55,8 +56,8 @@ def train(text_path, label_path):
     print(model.print_trainable_parameters())
 
     training_arguments = TrainingArguments(
-        output_dir='marian_args.pt',
-        learning_rate=1e-3,
+        output_dir='nllb_args.pt',
+        learning_rate=1e-5,
         per_device_train_batch_size=32,
         per_device_eval_batch_size=32,
         num_train_epochs=5,
@@ -80,7 +81,7 @@ def train(text_path, label_path):
     )
 
     trainer.train()
-    trainer.save_model("marian.pt") 
+    trainer.save_model("nllb.pt") 
 
 def generate_translation(batch, model):
     inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).input_ids.to("cuda")
@@ -88,7 +89,7 @@ def generate_translation(batch, model):
     return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
 
 def test(text_path, output_path):
-    model = AutoModelForSeq2SeqLM.from_pretrained("marian.pt").to("cuda")
+    model = AutoModelForSeq2SeqLM.from_pretrained("nllb.pt").to("cuda")
     test_sentences = read_file(text_path)
     data_dict = {"zh": test_sentences}
 
@@ -122,4 +123,3 @@ if __name__ == "__main__":
        train(args.text, args.label)
     else: 
         test(args.text, args.out)
-
