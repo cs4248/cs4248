@@ -7,7 +7,7 @@ import evaluate
 import torch
 import numpy as np 
 
-MAX_INPUT_LENGTH = 128
+MAX_INPUT_LENGTH = 64
 checkpoint = "Helsinki-NLP/opus-mt-zh-en"
 metric = evaluate.load("sacrebleu")
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, return_tensors="pt")
@@ -89,7 +89,7 @@ def train(text_path, label_path):
     print(model.print_trainable_parameters())
 
     training_arguments = TrainingArguments(
-        output_dir='marian.pt',
+        output_dir='marian_args.pt',
         learning_rate=5e-5,
         per_device_train_batch_size=64,
         per_device_eval_batch_size=64,
@@ -114,7 +114,7 @@ def train(text_path, label_path):
     )
 
     trainer.train()
-    trainer.save_model() 
+    trainer.save_model("marian.pt") 
 
 def test(text_path, output_path):
     model = AutoModelForSeq2SeqLM.from_pretrained("marian.pt")
