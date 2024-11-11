@@ -1,0 +1,8 @@
+evaluate
+torch
+torch cuda
+transformers
+sentencepiece
+protobuf
+sacrebleu
+scikit-learn
