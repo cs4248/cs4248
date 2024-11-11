@@ -1,4 +1,5 @@
-from transformers import AutoModelForSeq2SeqLM, M2M100ForConditionalGeneration, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MBartForConditionalGeneration, MBart50TokenizerFast
+from datasets import Dataset
 import torch
 from ensemble_train_utils import EnsembleModel, TrainingDataset
 from torch.utils.data import Subset
@@ -15,12 +16,12 @@ with open('train.zh-en.zh', 'r') as train_moe_text_file, \
     
     for text_line, best_idx in zip(train_moe_text_file, train_moe_labels_file):
         best_idx = int(best_idx)
-        if not (best_idx == 0 or best_idx == 3):
+        if not (best_idx == 0 or best_idx == 1):
             continue
 
         filtered_train_moe_text_file.write(text_line)
-        # small_100
-        if best_idx == 3:
+        # mbart
+        if best_idx == 1:
             filtered_train_moe_labels_file.write(str(1) + '\n')
         # mariant
         else:
@@ -28,12 +29,12 @@ with open('train.zh-en.zh', 'r') as train_moe_text_file, \
 
 models = [
     AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
-    M2M100ForConditionalGeneration.from_pretrained("alirezamsh/small100").to("cuda")
+    MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt").to("cuda")
 ]
 
 tokenizers = [
     AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
-    AutoTokenizer.from_pretrained("alirezamsh/small100"),
+    MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
 ]
 
 def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None):

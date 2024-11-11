@@ -1,16 +1,16 @@
 import torch
-from transformers import AutoModelForSeq2SeqLM, M2M100ForConditionalGeneration, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MBartForConditionalGeneration, MBart50TokenizerFast
 
 from ensemble_train_utils import EnsembleModel, TrainingDataset
 
 models = [
     AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
-    M2M100ForConditionalGeneration.from_pretrained("alirezamsh/small100").to("cuda")
+    MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt").to("cuda")
 ]
 
 tokenizers = [
     AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
-    AutoTokenizer.from_pretrained("alirezamsh/small100"),
+    MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
 ]
 
 def predict_sentence_from_model(dataset, model, untranslated_text):
