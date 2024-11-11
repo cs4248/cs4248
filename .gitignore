@@ -3,6 +3,7 @@ datasets
 marianmt_predictions
 mbart_predictions
 nllb_predictions
+small100_predictions
 t5_predictions
 
 # Directory for model
