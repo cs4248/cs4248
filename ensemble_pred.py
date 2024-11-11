@@ -1,6 +1,7 @@
 import torch
-from ensemble_test import EnsembleModel, TrainingDataset
 from transformers import AutoModelForSeq2SeqLM, M2M100ForConditionalGeneration, AutoTokenizer
+
+from ensemble_train_utils import EnsembleModel, TrainingDataset
 
 models = [
     AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
@@ -32,7 +33,7 @@ trained_model.load_state_dict(model_state_dict)
 
 dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
 
-with open('wmttest2022.zh','r') as train_moe_labels_file, open('pred.txt', 'w') as filtered_train_moe_labels_file:
+with open('tatoeba.zh','r') as train_moe_labels_file, open('pred.txt', 'w') as filtered_train_moe_labels_file:
     for i, best_idx in enumerate(train_moe_labels_file):
         pred = predict_sentence_from_model(dataset, EnsembleModel(), best_idx)
         filtered_train_moe_labels_file.write(pred + '\n')
