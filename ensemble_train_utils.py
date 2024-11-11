@@ -6,10 +6,10 @@ class EnsembleModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.l1 = torch.nn.Linear(193113, 1024).to('cuda')
+        self.l1 = torch.nn.Linear(193113, 4096).to('cuda')
         self.l2 = torch.nn.LeakyReLU(0.1)
         self.l3 = torch.nn.Dropout(0.2)
-        self.l4 = torch.nn.Linear(1024, 128).to('cuda')
+        self.l4 = torch.nn.Linear(4096, 128).to('cuda')
         self.l5 = torch.nn.LeakyReLU(0.1)
         self.l6 = torch.nn.Dropout(0.2)
         self.l7 = torch.nn.Linear(128, 2).to('cuda')
@@ -54,7 +54,7 @@ class TrainingDataset(Ds):
     def create_model_input(self, untranslated_text):
         with torch.no_grad():
             tokenized_texts = [tokenizer(untranslated_text, return_tensors="pt").to("cuda") for tokenizer in self.model_tokenizers]
-            output_logits = [model(**tokenized_text, decoder_input_ids=decoder_input_ids).logits for model, tokenized_text, decoder_input_ids in zip(models, tokenized_texts, self.decoder_input_ids_list)]
+            output_logits = [model(**tokenized_text, decoder_input_ids=decoder_input_ids).logits for model, tokenized_text, decoder_input_ids in zip(self.models, tokenized_texts, self.decoder_input_ids_list)]
             concatted_outputs = torch.cat(output_logits, dim=-1)
             concatted_outputs = concatted_outputs.squeeze()
         return concatted_outputs
