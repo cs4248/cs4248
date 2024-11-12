@@ -6,23 +6,25 @@ class EnsembleModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.l1 = torch.nn.Linear(315055, 2048).to('cuda')
-        self.l2 = torch.nn.LeakyReLU(0.1)
-        self.l3 = torch.nn.Dropout(0.2)
-        self.l4 = torch.nn.Linear(2048, 128).to('cuda')
-        self.l5 = torch.nn.LeakyReLU(0.1)
-        self.l6 = torch.nn.Dropout(0.2)
-        self.l7 = torch.nn.Linear(128, 2).to('cuda')
+        self.l1 = torch.nn.LayerNorm(315055).to('cuda')
+        self.l2 = torch.nn.Linear(315055, 2048).to('cuda')
+        self.l3 = torch.nn.LeakyReLU(0.1)
+        self.l4 = torch.nn.Dropout(0.2)
+        self.l5 = torch.nn.Linear(2048, 128).to('cuda')
+        self.l6 = torch.nn.LeakyReLU(0.1)
+        self.l7 = torch.nn.Dropout(0.2)
+        self.l8 = torch.nn.Linear(128, 2).to('cuda')
 
-    def forward(self, concatted_outputs):
-        # print(concatted_outputs.shape)
-        x = self.l1(concatted_outputs)
+    def forward(self, x):
+        # print(x.shape)
+        x = self.l1(x)
         x = self.l2(x)
         x = self.l3(x)
         x = self.l4(x)
         x = self.l5(x)
         x = self.l6(x)
         x = self.l7(x)
+        x = self.l8(x)
         return x
 
 class TrainingDataset(Ds):
