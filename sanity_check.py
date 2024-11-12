@@ -13,9 +13,19 @@ tokenizers = [
     MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
 ]
 
+tokenizers[1].src_lang = "zh_CN"
+
 def translate_with_model(model, tokenizer, text, num_beams=5):
-    inputs = tokenizer(text, return_tensors="pt").to("cuda")
-    outputs = model.generate(**inputs, num_beams=num_beams, early_stopping=True)
+
+    if model == models[0]:
+        inputs = tokenizer(text, return_tensors="pt").to("cuda")
+        outputs = model.generate(**inputs, num_beams=num_beams, early_stopping=True)
+    else:
+        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).input_ids.to("cuda")
+        outputs = model.generate(inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
+        # inputs = tokenizer(text, return_tensors="pt").to("cuda")
+        # outputs = model.generate(**inputs, num_beams=num_beams, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
+
     decoded_outputs = tokenizer.decode(outputs[0], skip_special_tokens=True)
     print(decoded_outputs)
     return outputs

@@ -6,7 +6,7 @@ class EnsembleModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.l1 = torch.nn.Linear(193113, 1024).to('cuda')
+        self.l1 = torch.nn.Linear(315055, 1024).to('cuda')
         self.l2 = torch.nn.LeakyReLU(0.1)
         self.l3 = torch.nn.Dropout(0.2)
         self.l4 = torch.nn.Linear(1024, 128).to('cuda')
@@ -15,7 +15,7 @@ class EnsembleModel(torch.nn.Module):
         self.l7 = torch.nn.Linear(128, 2).to('cuda')
 
     def forward(self, concatted_outputs):
-        # print(len(concatted_outputs))
+        # print(concatted_outputs.shape)
         x = self.l1(concatted_outputs)
         x = self.l2(x)
         x = self.l3(x)

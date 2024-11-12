@@ -95,7 +95,7 @@ def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None)
     print('Training finished in {} minutes.'.format((end - start).seconds / 60.0))
 
 # Init training data
-subset_size = 1000
+subset_size = 6000
 dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
 indices = list(range(subset_size))  # Define a list of indices
 subset = Subset(dataset, indices)
