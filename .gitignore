@@ -6,6 +6,7 @@ nllb_predictions
 small100_predictions
 t5_predictions
 other_predictions
+cos_sim
 
 # Directory for model
 models
