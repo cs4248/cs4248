@@ -1,15 +1,10 @@
 # Directories for datasets and predictions
 datasets
-marianmt_predictions
-mbart_predictions
-nllb_predictions
-small100_predictions
-t5_predictions
-other_predictions
-cos_sim
+*predictions
 
 # Directory for model
 models
+*.pt
 
 # Python related files
 .venv

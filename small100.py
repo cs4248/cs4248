@@ -7,7 +7,7 @@ import argparse
 # model_dir = "./fine_tuned_model"
 model_dir = "alirezamsh/small100"
 
-model = M2M100ForConditionalGeneration.from_pretrained(model_dir).to("cuda")
+model = M2M100ForConditionalGeneration.from_pretrained("small100.pt").to("cuda")
 tokenizer = AutoTokenizer.from_pretrained(model_dir)
 tokenizer.tgt_lang = "en"
 
