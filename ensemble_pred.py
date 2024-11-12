@@ -13,6 +13,9 @@ tokenizers = [
     MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
 ]
 
+tokenizers[1].src_lang = "zh_CN"
+tokenizers[1].tgt_lang = "en_XX"
+
 def predict_sentence_from_model(dataset, model, untranslated_text):
     model_input = dataset.create_model_input(untranslated_text)
     best_idx = torch.argmax(model(model_input))

@@ -37,6 +37,9 @@ tokenizers = [
     MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
 ]
 
+tokenizers[1].src_lang = "zh_CN"
+tokenizers[1].tgt_lang = "en_XX"
+
 def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None):
     """
     Complete the training procedure below by specifying the loss function
