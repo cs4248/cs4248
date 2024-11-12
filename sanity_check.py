@@ -14,17 +14,12 @@ tokenizers = [
 ]
 
 tokenizers[1].src_lang = "zh_CN"
+tokenizers[1].tgt_lang = "en_XX"
 
 def translate_with_model(model, tokenizer, text, num_beams=5):
 
-    if model == models[0]:
-        inputs = tokenizer(text, return_tensors="pt").to("cuda")
-        outputs = model.generate(**inputs, num_beams=num_beams, early_stopping=True)
-    else:
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).input_ids.to("cuda")
-        outputs = model.generate(inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
-        # inputs = tokenizer(text, return_tensors="pt").to("cuda")
-        # outputs = model.generate(**inputs, num_beams=num_beams, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
+    inputs = tokenizer(text, return_tensors="pt").to("cuda")
+    outputs = model.generate(**inputs, num_beams=num_beams, early_stopping=True)
 
     decoded_outputs = tokenizer.decode(outputs[0], skip_special_tokens=True)
     print(decoded_outputs)
