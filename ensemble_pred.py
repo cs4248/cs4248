@@ -24,12 +24,7 @@ def predict_sentence_from_model(dataset, model, untranslated_text):
     
     inputs = model_tokenizer_chosen(untranslated_text, return_tensors="pt").to("cuda")
 
-    # mariamt
-    if model == models[0]:
-        outputs = model_chosen.generate(**inputs)
-    # mbart
-    else:
-        outputs = model_chosen.generate(**inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
+    outputs = model_chosen.generate(**inputs)
     decoded_outputs = model_tokenizer_chosen.decode(outputs[0], skip_special_tokens=True)
     return decoded_outputs
 
