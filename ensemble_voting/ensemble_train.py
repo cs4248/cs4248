@@ -104,14 +104,14 @@ def get_arguments():
     return parser.parse_args()
     
 if __name__ == '__main__':
+    args = get_arguments()
+    model_path = args.model_path
+
     # Init training data
     subset_size = 6000
     dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
     indices = list(range(subset_size))  # Define a list of indices
     subset = Subset(dataset, indices)
-
-    args = get_arguments()
-    model_path = args.model_path
 
     train(EnsembleModel().to('cuda'), subset, 2, 0.001, 3, model_path)
 
