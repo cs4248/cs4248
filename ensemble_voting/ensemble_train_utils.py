@@ -28,10 +28,6 @@ class EnsembleModel(torch.nn.Module):
 
 class TrainingDataset(Ds):
     def __init__(self, text_path, lab_path, models, model_tokenizers):
-        '''
-        dataset_reduce_scale = reduce the sample size of the dataset. 
-        E.g dataset_reduce_scale=5 on sample size 100, basically reduce sample size from 100 to 20.
-        '''
         if text_path is not None:
             with open(text_path, "r", encoding="utf-8") as file: 
                 self.untranslated_texts = file.read().splitlines()

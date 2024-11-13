@@ -51,6 +51,7 @@ def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None)
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.1, total_iters=3)
 
     start = datetime.datetime.now()
     for epoch in range(num_epoch):
@@ -85,6 +86,7 @@ def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None)
                 print('[%d, %5d] loss: %.10f' %
                     (epoch + 1, step + 1, running_loss / 100))
                 running_loss = 0.0
+        scheduler.step()
 
     end = datetime.datetime.now()
     
@@ -108,10 +110,10 @@ if __name__ == '__main__':
     model_path = args.model_path
 
     # Init training data
-    subset_size = 6000
+    # subset_size = 7100
     dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
-    indices = list(range(subset_size))  # Define a list of indices
-    subset = Subset(dataset, indices)
+    # indices = list(range(subset_size))  # Define a list of indices
+    # subset = Subset(dataset, indices)
 
-    train(EnsembleModel().to('cuda'), subset, 2, 0.001, 3, model_path)
+    train(EnsembleModel().to('cuda'), dataset, 2, 0.001, 5, model_path)
 
