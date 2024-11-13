@@ -1,6 +1,5 @@
-from transformers import pipeline, DataCollatorForSeq2Seq, MBartForConditionalGeneration, MBart50TokenizerFast, AutoModelForSeq2SeqLM, AutoTokenizer, Trainer, TrainingArguments
+from transformers import DataCollatorForSeq2Seq, AutoModelForSeq2SeqLM, AutoTokenizer, Trainer, TrainingArguments
 from peft import get_peft_model, LoraConfig, TaskType
-from sklearn.model_selection import train_test_split
 from utils import read_file
 from datasets import Dataset
 from itertools import chain
@@ -10,55 +9,26 @@ import evaluate
 import torch
 
 MAX_INPUT_LENGTH = 64
-# checkpoint = "facebook/mbart-large-50-many-to-many-mmt"
 checkpoint = "Helsinki-NLP/opus-mt-zh-en"
 metric = evaluate.load("sacrebleu")
-# tokenizer = MBart50TokenizerFast.from_pretrained(checkpoint, src_lang="zh_CN", tgt_lang="en_XX")
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, return_tensors="pt")
 
-class TranslationDataset(torch.utils.data.Dataset):
-    def __init__(self, texts, labels=None, tokenizer=None, max_length=MAX_INPUT_LENGTH):
-        if labels:
-            model_inputs = tokenizer(
-                text=texts, 
-                text_target=labels, 
-                max_length=max_length, 
-                truncation=True, 
-                padding=True, 
-                return_tensors="pt"
-            )
-            self.labels = model_inputs["labels"]
-        else:
-            model_inputs = tokenizer(
-                text=texts, 
-                max_length=max_length, 
-                truncation=True, 
-                padding=True, 
-                return_tensors="pt"
-            )
-            self.labels = None
+def tokenize_function(sentences):
+    model_inputs = tokenizer(sentences["zh"], text_target=sentences["en"], padding="max_length", truncation=True, max_length=MAX_INPUT_LENGTH)
+    
+    return {
+        "input_ids": model_inputs["input_ids"],
+        "attention_mask": model_inputs["attention_mask"],
+        "labels": model_inputs["labels"],
+    }
 
-        self.texts = model_inputs["input_ids"]
-        self.masks = model_inputs["attention_mask"]
-
-    def __len__(self):
-        return len(self.texts)
-
-    def __getitem__(self, idx):
-        text = self.texts[idx]
-        mask = self.masks[idx]
-        if self.labels is not None:
-            label = self.labels[idx]
-            return {"input_ids": text, "attention_mask": mask, "labels": label}
-        else:
-            return {"input_ids": text, "attention_mask": mask}
-        
 def compute_metrics(eval_pred):
     preds, labels = eval_pred
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True, clean_up_tokenization_spaces=True)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-    return metric.compute(predictions=decoded_preds, references=decoded_labels)
+    bleu_score = metric.compute(predictions=decoded_preds, references=decoded_labels)["score"]
+    return {"bleu": bleu_score}
 
 def preprocess_logits_for_metrics(logits, labels):
     logits = logits[0]
@@ -67,20 +37,13 @@ def preprocess_logits_for_metrics(logits, labels):
 
 def train(text_path, label_paths):
     multiplier = len(label_paths)
-    texts = list(chain.from_iterable([read_file(text_path)] * multiplier))
-    labels = list(chain.from_iterable([read_file(label_path) for label_path in label_paths]))
+    chinese_sentences = list(chain.from_iterable([read_file(text_path)] * multiplier))
+    english_sentences = list(chain.from_iterable([read_file(label_path) for label_path in label_paths]))
 
-    print(len(texts), len(labels))
+    data_dict = {"zh": chinese_sentences, "en": english_sentences}
+    dataset = Dataset.from_dict(data_dict)
+    dataset = dataset.map(tokenize_function, batched=True, batch_size=5)
 
-    # train_chinese, validation_chinese, train_english, validation_english = train_test_split(
-    #     texts, labels, test_size=0.2, shuffle=True, random_state=42
-    # )
-
-    # train_dataset = TranslationDataset(train_chinese, train_english, tokenizer)
-    # validation_dataset = TranslationDataset(validation_chinese, validation_english, tokenizer)
-    dataset = TranslationDataset(texts, labels, tokenizer)
-
-    # model = MBartForConditionalGeneration.from_pretrained(checkpoint)
     model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
     peft_config = LoraConfig(
         r=16,
@@ -95,7 +58,7 @@ def train(text_path, label_paths):
     print(model.print_trainable_parameters())
 
     training_arguments = TrainingArguments(
-        output_dir="marian_args.pt",
+        output_dir="meta_args.pt",
         learning_rate=1e-3,
         per_device_train_batch_size=32,
         per_device_eval_batch_size=32,
@@ -104,7 +67,7 @@ def train(text_path, label_paths):
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
-        metric_for_best_model="score",
+        metric_for_best_model="bleu",
     )
 
     trainer = Trainer(
@@ -119,15 +82,7 @@ def train(text_path, label_paths):
     )
 
     trainer.train()
-    trainer.save_model("marian.pt") 
-
-# def generate_translation(batch, model):
-#     # Tokenize the batch and move inputs to CUDA
-#     inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=64).input_ids.to("cuda")
-#     outputs = model.generate(inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
-    
-#     # Decode each generated output
-#     return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+    trainer.save_model("meta.pt") 
 
 def generate_translation(batch, model):
     inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).input_ids.to("cuda")
@@ -135,10 +90,9 @@ def generate_translation(batch, model):
     return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
 
 
-def test(text_path, output_path):
-    # model = MBartForConditionalGeneration.from_pretrained(checkpoint).to("cuda")
-    model = AutoModelForSeq2SeqLM.from_pretrained("marian.pt").to("cuda")
-    batch_size = 20
+def translate(text_path, batch, output_path):
+    model = AutoModelForSeq2SeqLM.from_pretrained("meta.pt").to("cuda")
+    batch_size = batch or 20
     predictions = []
 
     test_sentences = read_file(text_path)
@@ -163,6 +117,7 @@ def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
     parser.add_argument("-label", nargs="+", help="List of prediction file paths containing translated ENGLISH text")
+    parser.add_argument("-batch", type=int, help="Batch size used during translation")
     parser.add_argument("-out", help="Output file path")
     return parser.parse_args()
 
@@ -171,4 +126,4 @@ if __name__ == "__main__":
     if args.label:
         train(args.text, args.label)
     else:
-        test(args.text, args.out)
+        translate(args.text, args.batch, args.out)
