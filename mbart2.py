@@ -59,7 +59,7 @@ def get_arguments():
     parser.add_argument("-input", help="Path to the input file", required=True)
     parser.add_argument("-out", help="Path to the output file", required=True)
     parser.add_argument("-model", help="Path to model")
-    parser.add_argument("-batch", help="Batch size for prediction", default=32)
+    parser.add_argument("-batch", help="Batch size for prediction", type=int, default=32)
     return parser.parse_args()
 
 if __name__ == "__main__":
