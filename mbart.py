@@ -1,64 +1,138 @@
-from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
+from transformers import DataCollatorForSeq2Seq, MBartForConditionalGeneration, MBart50TokenizerFast, Trainer, TrainingArguments
+from peft import get_peft_model, LoraConfig, TaskType
 from datasets import Dataset
+from utils import read_file, write_file, get_device
+from dotenv import load_dotenv
+import numpy as np
+import argparse
+import evaluate
 import torch
+import os 
 
-# print(torch.cuda.is_available())  # Should return True if CUDA is set up correctly
-# print(torch.version.cuda)         # Displays the CUDA version PyTorch is using
-# print(torch.cuda.current_device())# Shows the current device index
-# print(torch.cuda.get_device_name(0))  # Returns the GPU model name
+load_dotenv()
 
-# Load mBART model and tokenizer
-model = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt").to("cuda")
-tokenizer = MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
-tokenizer.src_lang = "zh_CN"
+MAX_INPUT_LENGTH = 64
+MAX_TRANSLATE_LENGTH = 250
+checkpoint = "facebook/mbart-large-50-many-to-many-mmt"
+metric = evaluate.load("sacrebleu")
+tokenizer = MBart50TokenizerFast.from_pretrained(checkpoint, src_lang="zh_CN", tgt_lang="en_XX")
+device = get_device()
 
-# Generate translations for a batch
-def generate_translation(batch):
-    # Tokenize the batch and move inputs to CUDA
-    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True).input_ids.to("cuda")
+def tokenize_function(sentences):
+    model_inputs = tokenizer(sentences["zh"], text_target=sentences["en"], padding="max_length", truncation=True, max_length=MAX_INPUT_LENGTH)
+    
+    return {
+        "input_ids": model_inputs["input_ids"],
+        "attention_mask": model_inputs["attention_mask"],
+        "labels": model_inputs["labels"],
+    }
+        
+def compute_metrics(eval_pred):
+    preds, labels = eval_pred
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    bleu_score = metric.compute(predictions=decoded_preds, references=decoded_labels)["score"]
+    return {"bleu": bleu_score}
+
+def preprocess_logits_for_metrics(logits, labels):
+    logits = logits[0]
+    logits = torch.argmax(logits, dim=-1)
+    return logits
+
+def train(text_path, label_path):
+    chinese_sentences = read_file(text_path)
+    english_sentences = read_file(label_path)
+    
+    data_dict = {"zh": chinese_sentences, "en": english_sentences}
+    dataset = Dataset.from_dict(data_dict)
+    dataset = dataset.map(tokenize_function, batched=True, batch_size=5)
+
+    model = MBartForConditionalGeneration.from_pretrained(checkpoint)
+    peft_config = LoraConfig(
+        r=16,
+        lora_alpha=32,
+        lora_dropout=0.05,
+        bias="none",
+        task_type=TaskType.SEQ_2_SEQ_LM,
+        target_modules=["k_proj", "v_proj", "q_proj"]
+    )
+
+    model = get_peft_model(model, peft_config)
+    print(model.print_trainable_parameters())
+
+    training_arguments = TrainingArguments(
+        output_dir="mbart_args.pt",
+        learning_rate=1e-5,
+        per_device_train_batch_size=32,
+        per_device_eval_batch_size=32,
+        num_train_epochs=5,
+        fp16=True,
+        eval_strategy="epoch",
+        save_strategy="epoch",
+        load_best_model_at_end=True,
+        metric_for_best_model="bleu",
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_arguments,
+        processing_class=tokenizer,
+        train_dataset=dataset,
+        eval_dataset=dataset,
+        data_collator=DataCollatorForSeq2Seq(tokenizer, model, padding=True),
+        compute_metrics=compute_metrics,
+        preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
+
+    trainer.train()
+    trainer.save_model("mbart.pt") 
+
+def generate_translation(batch, model):
+    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_TRANSLATE_LENGTH).input_ids.to(device)
     outputs = model.generate(inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
     
-    # Decode each generated output
-    return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+    return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
 
-# Paths to the English and Chinese files
-en_path = "train.zh-en.en"
-zh_path = "train.zh-en.zh"
+def translate(text_path, use_ft, batch, output_path):
+    if use_ft:
+        if not os.path.exists("mbart.pt"):
+            raise Exception("Requires model to be fine tuned first")
+        chosen = "mbart.pt"
+    else:
+        chosen = checkpoint
 
-# Read the English and Chinese sentences
-with open(en_path, "r", encoding="utf-8") as en_file:
-    en_sentences = [line.strip() for line in en_file]
+    model = MBartForConditionalGeneration.from_pretrained(chosen).to(device)
+    batch_size = batch or 20
+    predictions = []
 
-with open(zh_path, "r", encoding="utf-8") as zh_file:
-    zh_sentences = [line.strip() for line in zh_file]
+    test_sentences = read_file(text_path)
+    data_dict = {"zh": test_sentences}
 
-# Ensure both files have the same number of lines
-assert len(en_sentences) == len(zh_sentences), "Mismatched sentence counts in .en and .zh files"
-
-# Create a dictionary with English and Chinese parallel texts
-data_dict = {"en": en_sentences, "zh": zh_sentences}
-
-# Convert the dictionary to a Hugging Face Dataset
-trans_dataset = Dataset.from_dict(data_dict)
-
-# Process the dataset in batches
-batch_size = 1  # Adjust based on available memory
-predictions = []
-references = []
-
-for i in range(0, len(trans_dataset), batch_size):
-    if i % 1000 == 0:
-        print(i)
+    trans_dataset = Dataset.from_dict(data_dict)
         
-    batch = trans_dataset[i: i + batch_size]
-    pred = generate_translation(batch)
-    predictions.extend(pred)
-    references.extend([ref for ref in batch["en"]])  # Wrap in a list for sacrebleu
+    for i in range(0, len(trans_dataset), batch_size):
+        if i % 100 == 0:
+            print(i, flush=True)
+            
+        batch = trans_dataset[i: i + batch_size]
+        pred = generate_translation(batch, model)
+        predictions.extend(pred)
+
+    write_file(output_path, predictions)
     
-    # print(predictions)
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
+    parser.add_argument("-label", help="Label file path containing ideal translated ENGLISH text output")
+    parser.add_argument("-ft", type=bool, help="True to use fine-tuned version else use default checkpoint")
+    parser.add_argument("-batch", type=int, help="Batch size used during translation")
+    parser.add_argument("-out", help="Output file path")
+    return parser.parse_args()
 
-
-with open("pred_train.zh-en.en", "w", encoding="utf-8") as f:
-    for pred in predictions:
-        f.write(pred + "\n")
-        
+if __name__ == "__main__":
+    args = get_arguments()
+    if args.label:
+        train(args.text, args.label)
+    else:
+        translate(args.text, args.ft, args.batch, args.out)
