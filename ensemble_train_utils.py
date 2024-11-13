@@ -6,8 +6,8 @@ class EnsembleModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.l1 = torch.nn.LayerNorm(315055).to('cuda')
-        self.l2 = torch.nn.Linear(315055, 2048).to('cuda')
+        self.l1 = torch.nn.LayerNorm(321207).to('cuda')
+        self.l2 = torch.nn.Linear(321207, 2048).to('cuda')
         self.l3 = torch.nn.LeakyReLU(0.1)
         self.l4 = torch.nn.Dropout(0.2)
         self.l5 = torch.nn.Linear(2048, 128).to('cuda')

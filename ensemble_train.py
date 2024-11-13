@@ -16,12 +16,12 @@ with open('train.zh-en.zh', 'r') as train_moe_text_file, \
     
     for text_line, best_idx in zip(train_moe_text_file, train_moe_labels_file):
         best_idx = int(best_idx)
-        if not (best_idx == 0 or best_idx == 1):
+        if not (best_idx == 0 or best_idx == 4):
             continue
 
         filtered_train_moe_text_file.write(text_line)
-        # mbart
-        if best_idx == 1:
+        # nllb
+        if best_idx == 4:
             filtered_train_moe_labels_file.write(str(1) + '\n')
         # mariant
         else:
@@ -29,12 +29,12 @@ with open('train.zh-en.zh', 'r') as train_moe_text_file, \
 
 models = [
     AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
-    MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt").to("cuda")
+    AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M").to("cuda")
 ]
 
 tokenizers = [
     AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
-    MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
+    AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
 ]
 
 tokenizers[1].src_lang = "zh_CN"

@@ -5,12 +5,12 @@ from ensemble_train_utils import EnsembleModel, TrainingDataset
 
 models = [
     AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
-    MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt").to("cuda")
+    AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M").to("cuda")
 ]
 
 tokenizers = [
     AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
-    MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
+    AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
 ]
 
 tokenizers[1].src_lang = "zh_CN"
@@ -37,7 +37,7 @@ trained_model.load_state_dict(model_state_dict)
 
 dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
 
-with open('wmttest2022.zh','r') as train_moe_labels_file, open('pred.txt', 'w') as filtered_train_moe_labels_file:
+with open('wmttest2022.zh','r') as train_moe_labels_file, open('wmttest2022_params2_pred.txt', 'w') as filtered_train_moe_labels_file:
     for i, best_idx in enumerate(train_moe_labels_file):
         pred = predict_sentence_from_model(dataset, EnsembleModel(), best_idx)
         filtered_train_moe_labels_file.write(pred + '\n')
