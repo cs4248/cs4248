@@ -26,9 +26,9 @@ def get_model(model_path):
         return AutoModelForSeq2SeqLM.from_pretrained(model_path).to(device)
     return pipeline(
         "translation",
-        model="facebook/nllb-200-distilled-600M",
-        src_lang="zho_Hans",
-        tgt_lang="eng_Latn",
+        model="facebook/mbart-large-50-many-to-many-mmt",
+        src_lang="zh_CN",
+        tgt_lang="en_XX",
         max_length=MAX_LENGTH,
         device=device
     )
@@ -37,9 +37,9 @@ def get_tokenizer(model_path):
     if model_path:
         tokenizer = AutoTokenizer.from_pretrained(model_path, return_tensors="pt")
     else:
-        tokenizer = AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M", return_tensors="pt")
-    tokenizer.src_lang = "zho_Hans"
-    tokenizer.tgt_lang = "eng_Latn"
+        tokenizer =AutoTokenizer.from_pretrained("facebook/mbart-large-50-many-to-many-mmt", return_tensors="pt")
+    tokenizer.src_lang = "zh_CN"
+    tokenizer.tgt_lang = "en_XX"
     return tokenizer
 
 def get_tokenize_function(tokenizer):
@@ -59,7 +59,7 @@ def get_arguments():
     parser.add_argument("-input", help="Path to the input file", required=True)
     parser.add_argument("-out", help="Path to the output file", required=True)
     parser.add_argument("-model", help="Path to model")
-    parser.add_argument("-batch", help="Batch size for prediction", type=int, default=32)
+    parser.add_argument("-batch", help="Batch size for prediction", default=32)
     return parser.parse_args()
 
 if __name__ == "__main__":

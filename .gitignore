@@ -9,3 +9,7 @@ models
 # Python related files
 .venv
 __pycache__
+
+# Others
+*.sh
+

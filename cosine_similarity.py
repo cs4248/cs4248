@@ -1,13 +1,16 @@
+import argparse
+from sklearn.metrics.pairwise import cosine_similarity
 import torch
 from transformers import AutoTokenizer, AutoModel
-from sklearn.metrics.pairwise import cosine_similarity
 
-from utils import read_file
+from utils import get_device, read_file
+
+device = get_device()
 
 # Load the tokenizer and model
 model_name = "uer/sbert-base-chinese-nli"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModel.from_pretrained(model_name).to("cuda")
+model = AutoModel.from_pretrained(model_name).to(device)
 
 # Function to compute sentence embeddings
 def get_sentence_embedding(sentence):
@@ -16,8 +19,8 @@ def get_sentence_embedding(sentence):
         return_tensors="pt",
         padding=True,
         truncation=True,
-        max_length=512
-    ).to("cuda")
+        max_length=500
+    ).to(device)
     with torch.no_grad():
         embeddings = model(**inputs).last_hidden_state.mean(dim=1)  # Average pooling
     return embeddings.cpu().numpy()
@@ -39,43 +42,24 @@ def write_similarity_scores(scores, file_path):
             file.write(f"{score:.4f}\n")
 
 # Main function to process multiple files
-def process_files(input_paths, predicted_paths, similarity_score_paths):
-    for input_path, predicted_path, score_path in zip(input_paths, predicted_paths, similarity_score_paths):
-        # Load the sentences from the files
-        reference_sentences = read_file(input_path)
-        hypothesis_sentences = read_file(predicted_path)
+def process_files(input_path, predicted_path, output_path):
+    reference_sentences = read_file(input_path)
+    hypothesis_sentences = read_file(predicted_path)
 
-        # Calculate similarity scores for each sentence pair
-        similarity_scores = calculate_similarity_scores(reference_sentences, hypothesis_sentences)
+    # Calculate similarity scores for each sentence pair
+    similarity_scores = calculate_similarity_scores(reference_sentences, hypothesis_sentences)
 
-        # Write the similarity scores to the specified output file
-        write_similarity_scores(similarity_scores, score_path)
+    # Write the similarity scores to the specified output file
+    write_similarity_scores(similarity_scores, output_path)
 
-# List of input file paths, predicted file paths, and similarity score output paths
-input_file_paths = [
-    "datasets/tatoeba.zh",
-    "datasets/tatoeba.zh",
-    "datasets/tatoeba.zh",
-    "datasets/wmttest2022.zh",
-    "datasets/wmttest2022.zh",
-    "datasets/wmttest2022.zh"
-]
-predicted_file_paths = [
-    "test_data/marianmt/pred_tatoeba.zh",
-    "test_data/nllb/pred_tatoeba.zh",
-    "test_data/mbart/pred_tatoeba.zh",
-    "test_data/marianmt/pred_wmttest2022.zh",
-    "test_data/nllb/pred_wmttest2022.zh",
-    "test_data/mbart/pred_wmttest2022.zh"
-]
-similarity_score_file_paths = [
-    "test_data/marianmt/tatoeba_cos",
-    "test_data/nllb/tatoeba_cos",
-    "test_data/mbart/tatoeba_cos",
-    "test_data/marianmt/wmttest2022_cos",
-    "test_data/nllb/wmttest2022_cos",
-    "test_data/mbart/wmttest2022_cos"
-]
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-input", help="Path to the original untranslated file", required=True)
+    parser.add_argument("-pred", help="Path to the reverse translated file", required=True)
+    parser.add_argument("-out", help="Path to the output file", required=True)
+    return parser.parse_args()
 
-# Process each set of files
-process_files(input_file_paths, predicted_file_paths, similarity_score_file_paths)
+if __name__ == "__main__":
+    args = get_arguments()
+    process_files(args.input, args.pred, args.out)
+

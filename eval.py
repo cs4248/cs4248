@@ -4,8 +4,8 @@ from utils import compute_bleu_score, read_file
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pred', help='path to the prediction file', required=True)
-    parser.add_argument('--lab', help='path to the label file', required=True)
+    parser.add_argument("-pred", help="path to the prediction file", required=True)
+    parser.add_argument("-lab", help="path to the label file", required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
