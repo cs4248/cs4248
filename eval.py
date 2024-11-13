@@ -1,11 +1,11 @@
 import argparse
 
-from utils import compute_bleu_score, read_file
+from utils import compute_bleu_score, compute_comet_score, read_file
 
 def check_valid_metric(metric):
     allowed = {"comet", "bleu"}
     if metric.lower() not in allowed:
-        raise argparse.ArgumentTypeError(f"Invalid choice: {value}. Choose from 'BLEU' or 'COMET'")
+        raise argparse.ArgumentTypeError(f"Invalid choice: {metric}. Choose from 'BLEU' or 'COMET'")
     return metric.lower()
 
 def get_arguments():

@@ -1,6 +1,6 @@
 from transformers import DataCollatorForSeq2Seq, AutoModelForSeq2SeqLM, AutoTokenizer, Trainer, TrainingArguments
 from peft import get_peft_model, LoraConfig, TaskType
-from utils import read_file
+from utils import read_file, write_file, get_device
 from datasets import Dataset
 from itertools import chain
 import numpy as np
@@ -12,6 +12,7 @@ MAX_INPUT_LENGTH = 64
 checkpoint = "Helsinki-NLP/opus-mt-zh-en"
 metric = evaluate.load("sacrebleu")
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, return_tensors="pt")
+device = get_device()
 
 def tokenize_function(sentences):
     model_inputs = tokenizer(sentences["zh"], text_target=sentences["en"], padding="max_length", truncation=True, max_length=MAX_INPUT_LENGTH)
@@ -85,13 +86,13 @@ def train(text_path, label_paths):
     trainer.save_model("meta.pt") 
 
 def generate_translation(batch, model):
-    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).input_ids.to("cuda")
+    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).input_ids.to(device)
     outputs = model.generate(inputs)
-    return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+    return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
 
 
 def translate(text_path, batch, output_path):
-    model = AutoModelForSeq2SeqLM.from_pretrained("meta.pt").to("cuda")
+    model = AutoModelForSeq2SeqLM.from_pretrained("meta.pt").to(device)
     batch_size = batch or 20
     predictions = []
 
@@ -108,9 +109,7 @@ def translate(text_path, batch, output_path):
         pred = generate_translation(batch, model)
         predictions.extend(pred)
 
-    with open(output_path, "w", encoding="utf-8") as predicted_file:
-        for pred in predictions:
-            predicted_file.write(pred + "\n")
+    write_file(output_path, predictions)
 
     
 def get_arguments():

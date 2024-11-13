@@ -2,7 +2,7 @@ from evaluate import load
 import torch
 
 sacrebleu = load("sacrebleu")
-comet = load("metrics/comet/comet.py")
+comet = load("comet")
 
 '''
 Evaluation utils
@@ -14,7 +14,7 @@ def compute_bleu_score(pred, lab):
     return sacrebleu.compute(predictions=pred, references=lab)["score"]
 
 def compute_comet_score(src, pred, lab):
-    return comet.compute(predictions=pred, references=lab, sources=src)["scores"]
+    return comet.compute(predictions=pred, references=lab, sources=src)["mean_score"]
 
 '''
 File utils

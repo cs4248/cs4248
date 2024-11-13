@@ -1,12 +1,13 @@
 from transformers import DataCollatorForSeq2Seq, MBartForConditionalGeneration, MBart50TokenizerFast, Trainer, TrainingArguments
 from peft import get_peft_model, LoraConfig, TaskType
 from datasets import Dataset
-from utils import read_file
+from utils import read_file, write_file, get_device
 from dotenv import load_dotenv
 import numpy as np
 import argparse
 import evaluate
 import torch
+import os 
 
 load_dotenv()
 
@@ -14,6 +15,7 @@ MAX_INPUT_LENGTH = 64
 checkpoint = "facebook/mbart-large-50-many-to-many-mmt"
 metric = evaluate.load("sacrebleu")
 tokenizer = MBart50TokenizerFast.from_pretrained(checkpoint, src_lang="zh_CN", tgt_lang="en_XX")
+device = get_device()
 
 def tokenize_function(sentences):
     model_inputs = tokenizer(sentences["zh"], text_target=sentences["en"], padding="max_length", truncation=True, max_length=MAX_INPUT_LENGTH)
@@ -86,18 +88,20 @@ def train(text_path, label_path):
     trainer.save_model("mbart.pt") 
 
 def generate_translation(batch, model):
-    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=64).input_ids.to("cuda")
+    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=64).input_ids.to(device)
     outputs = model.generate(inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
     
-    return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+    return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
 
 def translate(text_path, use_ft, batch, output_path):
     if use_ft:
+        if not os.path.exists("mbart.pt"):
+            raise Exception("Requires model to be fine tuned first")
         chosen = "mbart.pt"
     else:
         chosen = checkpoint
 
-    model = MBartForConditionalGeneration.from_pretrained(chosen).to("cuda")
+    model = MBartForConditionalGeneration.from_pretrained(chosen).to(device)
     batch_size = batch or 20
     predictions = []
 
@@ -114,10 +118,7 @@ def translate(text_path, use_ft, batch, output_path):
         pred = generate_translation(batch, model)
         predictions.extend(pred)
 
-    with open(output_path, "w", encoding="utf-8") as predicted_file:
-        for pred in predictions:
-            predicted_file.write(pred + "\n")
-
+    write_file(output_path, predictions)
     
 def get_arguments():
     parser = argparse.ArgumentParser()
