@@ -1,37 +1,26 @@
-from transformers import AutoModel, AutoTokenizer
-import numpy as np 
 import argparse
-from moe_dataset import MoEDataset
+import datetime
+import numpy as np 
 import torch
 from torch.utils.data import DataLoader, Dataset
-import datetime
+from transformers import AutoModel, AutoTokenizer
 
-from utils import read_file
+from moe.moe_dataset import MoEDataset
+from utils import get_device, read_file
 
+device = get_device()
+
+# Classifier transformer
 base_model_checkpoint = "bert-base-chinese"
 tokenizer = AutoTokenizer.from_pretrained(base_model_checkpoint, return_pt="pt")
-base_model = AutoModel.from_pretrained(base_model_checkpoint)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-output_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
-
-base_model.to(device)
+base_model = AutoModel.from_pretrained(base_model_checkpoint).to(device)
 base_model.eval()
 
-MAX_LENGTH = 500
-TRAIN_PRED_PATHS = [
-    "marianmt_predictions/pred_train.zh-en.en",
-    "nllb_predictions/pred_train.zh-en.en",
-    "mbart_predictions/pred_train.zh-en.en"
-]
-# TEST_SUFFIX = "_tatoeba.en"
-TEST_SUFFIX = "_wmttest2022.en"
-TEST_PRED_PATHS = [
-    "marianmt_predictions/pred" + TEST_SUFFIX,
-    "nllb_predictions/pred" + TEST_SUFFIX,
-    "mbart_predictions/pred" + TEST_SUFFIX
-]
+# Common tokenizer for all 3 expert model outputs
+output_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
 
+# Hyper parameters
+MAX_LENGTH = 500
 NUM_LABELS = 3
 NUM_EPOCHS = 30
 LR = 1e-4
@@ -39,6 +28,7 @@ LR = 1e-4
 for param in base_model.parameters():
     param.requires_grad = False
 
+# Classifier head for classifier transformer
 class SimpleMoEClassifier(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -62,9 +52,10 @@ class SimpleMoEClassifier(torch.nn.Module):
             return torch.argmax(Y, dim=1)
 
 class SimpleMoEDataset(Dataset):
-    def __init__(self, text_path, pred_paths, label_path=None):
+    def __init__(self, text_path, pred_paths=None, label_path=None):
         self.X1 = preprocess_X(read_file(text_path))
         self.Y = None
+        self.X2 = None
 
         if label_path:
             tokens = output_tokenizer(
@@ -76,26 +67,31 @@ class SimpleMoEDataset(Dataset):
             )
             self.Y = tokens["input_ids"]
 
-        preds = [read_file(pred_path) for pred_path in pred_paths]
-        self.X2 = []
-        for pred in preds:
-            tokens = output_tokenizer(
-                text=pred,
-                max_length=MAX_LENGTH,
-                truncation=True,
-                padding="max_length",
-                return_tensors="pt"
-            )
-            shape = tokens["input_ids"].shape
-            self.X2.append(tokens["input_ids"])
-        self.X2 = torch.cat(self.X2).view((shape[0], -1, shape[1]))
+        if pred_paths:
+            preds = [read_file(pred_path) for pred_path in pred_paths]
+            self.X2 = []
+            for pred in preds:
+                tokens = output_tokenizer(
+                    text=pred,
+                    max_length=MAX_LENGTH,
+                    truncation=True,
+                    padding="max_length",
+                    return_tensors="pt"
+                )
+                shape = tokens["input_ids"].shape
+                self.X2.append(tokens["input_ids"])
+            self.X2 = torch.cat(self.X2).view((shape[0], -1, shape[1]))
 
     def __len__(self):
         return len(self.X1)
 
     def __getitem__(self, idx):
         if self.Y == None:
+            if self.X2 == None:
+                return self.X1[idx]
             return self.X1[idx], self.X2[idx]
+        if self.X2 == None:
+            return self.X1[idx], self.Y[idx]
         return self.X1[idx], self.X2[idx], self.Y[idx]
 
 class TokenizedDataset(Dataset):
@@ -131,15 +127,11 @@ def preprocess_X(texts):
             }
             X_list.append(base_model(**X).pooler_output)
     result = torch.cat(X_list, dim=0)
-    print("Pre-processing done")
     return result
 
-def get_all_preds(pred_paths):
-    return [read_file(pred_path) for pred_path in pred_paths]
-
-def train(text_path, label_path, model_path):
-    train_dataset = SimpleMoEDataset(text_path, TRAIN_PRED_PATHS, label_path)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+def train(text_path, label_path, pred_paths, model_path, batch_size):
+    train_dataset = SimpleMoEDataset(text_path, pred_paths, label_path)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size)
 
     model = SimpleMoEClassifier()
     model.to(device)
@@ -148,7 +140,6 @@ def train(text_path, label_path, model_path):
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     start = datetime.datetime.now()
-    print("Starting training")
     for epoch in range(NUM_EPOCHS):
         model.train()
         optimizer.zero_grad()
@@ -177,11 +168,11 @@ def train(text_path, label_path, model_path):
     torch.save(checkpoint, model_path)
     print("Training finished in {} minutes.".format((end - start).seconds / 60.0))
 
-def test(text_path, output_path, model_path):
-    models = [read_file(pred_path) for pred_path in TEST_PRED_PATHS]
+def test(text_path, output_path, pred_paths, model_path, batch_size):
+    models = [read_file(pred_path) for pred_path in pred_paths]
 
-    test_dataset = SimpleMoEDataset(text_path, TEST_PRED_PATHS)
-    test_loader = DataLoader(test_dataset, batch_size=32)
+    test_dataset = SimpleMoEDataset(text_path)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
     checkpoint = torch.load(model_path, weights_only=True)
     model = SimpleMoEClassifier().to(device)
@@ -189,26 +180,28 @@ def test(text_path, output_path, model_path):
 
     responses = []
     for i, data in enumerate(test_loader):
-        X1, _ = data
+        X1 = data
         Y_pred = model.predict(X1.to(device))
         for j, y in enumerate(Y_pred):
-            responses.append(models[y][i * 32 + j] + "\n")
+            responses.append(models[y][i * batch_size + j] + "\n")
 
     with open(output_path, "w", encoding="utf-8") as predicted_file:
         predicted_file.writelines(responses)
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
-    parser.add_argument("-label", help="Label file path containing model to use")
+    parser.add_argument("-input", help="Text file path containing untranslated Chinese text", required=True)
+    parser.add_argument("-pred", nargs="+", help="Prediction file path containing translated English text", required=True)
+    parser.add_argument("-label", help="Label file path containing translated English text")
     parser.add_argument("-out", help="Output file path")
     parser.add_argument("-model", help="Model path", required=True)
+    parser.add_argument("-batch", help="Batch size for predictions", type=int, default=32)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = get_arguments()
     if args.label: 
-        train(args.text, args.label, args.model)
+        train(args.input, args.label, args.pred, args.model, args.batch)
     else: 
-        test(args.text, args.out, args.model)
+        test(args.input, args.out, args.pred, args.model, args.batch)
 
