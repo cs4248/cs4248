@@ -21,9 +21,9 @@ output_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
 
 # Hyper parameters
 MAX_LENGTH = 500
-NUM_LABELS = 3
-NUM_EPOCHS = 30
-LR = 1e-4
+NUM_LABELS = 4
+NUM_EPOCHS = 10
+LR = 1e-3
 
 for param in base_model.parameters():
     param.requires_grad = False
