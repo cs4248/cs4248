@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MBartForConditionalGeneration, MBart50TokenizerFast
-
+import argparse
 from ensemble_train_utils import EnsembleModel, TrainingDataset
 
 models = [
@@ -28,17 +28,29 @@ def predict_sentence_from_model(dataset, model, untranslated_text):
     decoded_outputs = model_tokenizer_chosen.decode(outputs[0], skip_special_tokens=True)
     return decoded_outputs
 
-checkpoint = torch.load('model.pt')
-model_state_dict = checkpoint['model_state_dict']
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_path', help='path to the model', required=True)
+    parser.add_argument('--test_text_path', help='path to the input file', required=True)
+    parser.add_argument('--out_path', help='path to the input file', required=True)
+    return parser.parse_args()
 
-trained_model = EnsembleModel().to('cuda')
-trained_model.load_state_dict(model_state_dict)
+if __name__ == "__main__":
+    args = get_arguments()
+    model_filename = args.model_path
+    test_text_path = args.test_text_path
+    out_path = args.out_path
 
+    checkpoint = torch.load(model_filename)
+    model_state_dict = checkpoint['model_state_dict']
 
-dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
+    trained_model = EnsembleModel().to('cuda')
+    trained_model.load_state_dict(model_state_dict)
 
-with open('wmttest2022.zh','r') as train_moe_labels_file, open('wmttest2022_params2_pred.txt', 'w') as filtered_train_moe_labels_file:
-    for i, best_idx in enumerate(train_moe_labels_file):
-        pred = predict_sentence_from_model(dataset, EnsembleModel(), best_idx)
-        filtered_train_moe_labels_file.write(pred + '\n')
-        print(i)
+    dataset = TrainingDataset(None, None, models, tokenizers)
+
+    with open(test_text_path,'r') as train_moe_labels_file, open(out_path, 'w') as filtered_train_moe_labels_file:
+        for i, best_idx in enumerate(train_moe_labels_file):
+            pred = predict_sentence_from_model(dataset, trained_model, best_idx)
+            filtered_train_moe_labels_file.write(pred + '\n')
+            print(i)
