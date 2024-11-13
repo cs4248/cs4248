@@ -1,3 +1,4 @@
+import argparse
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MBartForConditionalGeneration, MBart50TokenizerFast
 from datasets import Dataset
 import torch
@@ -97,11 +98,20 @@ def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None)
     print('Model saved in ', model_path)
     print('Training finished in {} minutes.'.format((end - start).seconds / 60.0))
 
-# Init training data
-subset_size = 6000
-dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
-indices = list(range(subset_size))  # Define a list of indices
-subset = Subset(dataset, indices)
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_path', help='path to save the model at', required=True)
+    return parser.parse_args()
+    
+if __name__ == '__main__':
+    # Init training data
+    subset_size = 6000
+    dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
+    indices = list(range(subset_size))  # Define a list of indices
+    subset = Subset(dataset, indices)
 
-train(EnsembleModel().to('cuda'), subset, 2, 0.001, 3, 'model.pt')
+    args = get_arguments()
+    model_path = args.model_path
+
+    train(EnsembleModel().to('cuda'), subset, 2, 0.001, 3, model_path)
 

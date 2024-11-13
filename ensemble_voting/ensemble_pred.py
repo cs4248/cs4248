@@ -31,8 +31,8 @@ def predict_sentence_from_model(dataset, model, untranslated_text):
 def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', help='path to the model', required=True)
-    parser.add_argument('--test_text_path', help='path to the input file', required=True)
-    parser.add_argument('--out_path', help='path to the input file', required=True)
+    parser.add_argument('--test_text_path', help='path to the test text file', required=True)
+    parser.add_argument('--out_path', help='path to output the predictions to', required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
