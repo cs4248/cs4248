@@ -1,44 +1,45 @@
-import torch
-from transformers import AutoTokenizer, M2M100ForConditionalGeneration, pipeline, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, M2M100ForConditionalGeneration
 from datasets import Dataset
+from utils import read_file, write_file, get_device
 import argparse
 
-# USE THE FIRST MODEL_DIR IF YOU CREATED one using small100_finetune.py
-# model_dir = "./fine_tuned_model"
-model_dir = "alirezamsh/small100"
-
-model = M2M100ForConditionalGeneration.from_pretrained("small100.pt").to("cuda")
-tokenizer = AutoTokenizer.from_pretrained(model_dir)
+MAX_INPUT_LENGTH = 250
+checkpoint = "alirezamsh/small100"
+tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 tokenizer.tgt_lang = "en"
+device = get_device()
+model = M2M100ForConditionalGeneration.from_pretrained(checkpoint).to(device)
 
-def translate_file(file_path, output_path):
-    with open(file_path, "r", encoding="utf-8") as test_file:
-        test_sentences = test_file.read().splitlines()
+def generate_translation(batch, model):
+    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).input_ids.to(device)
+    outputs = model.generate(inputs)
+    return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
 
+def translate(text_path, batch, output_path):
+    test_sentences = read_file(text_path)
     data_dict = {"zh": test_sentences}
-    # Convert the dictionary to a Hugging Face Dataset
-    dataset = Dataset.from_dict(data_dict)
 
-    def translate_batch(batch):
-        inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True).to("cuda")
-        outputs = model.generate(**inputs)
-        decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        return {"translation": decoded_outputs}
+    trans_dataset = Dataset.from_dict(data_dict)
+    batch_size = batch or 20
+    predictions = []
 
-    # Apply the translation in batches of size something
-    translated_dataset = dataset.map(translate_batch, batched=True, batch_size=5)
-    translated_outputs = translated_dataset["translation"]
+    for i in range(0, len(trans_dataset), batch_size):
+        if i % 100 == 0:
+            print(i)
+            
+        batch = trans_dataset[i: i + batch_size]
+        pred = generate_translation(batch, model)
+        predictions.extend(pred)        
 
-    with open(output_path, "w", encoding="utf-8") as predicted_file:
-        predicted_file.writelines(output_line + '\n' for output_line in translated_outputs)
-
+    write_file(output_path, predictions)
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--in_path', help='path to the input file', required=True)
-    parser.add_argument('--out_path', help='path to the output file', required=True)
+    parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
+    parser.add_argument("-batch", type=int, help="Batch size used during translation")
+    parser.add_argument("-out", help="Output file path", required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = get_arguments()
-    translate_file(args.in_path, args.out_path)
+    translate(args.text, args.batch, args.out)

@@ -1,40 +1,48 @@
 import argparse
 from transformers import T5ForConditionalGeneration, T5Tokenizer
+from utils import read_file, write_file, get_device
+from datasets import Dataset
 
-# Initialize the model and tokenizer
-model_name = 'utrobinmv/t5_translate_en_ru_zh_small_1024'
-model = T5ForConditionalGeneration.from_pretrained(model_name)
-tokenizer = T5Tokenizer.from_pretrained(model_name)
+MAX_INPUT_LENGTH=250
+checkpoint = 'utrobinmv/t5_translate_en_ru_zh_small_1024'
+tokenizer = T5Tokenizer.from_pretrained(checkpoint)
+device = get_device()
+model = T5ForConditionalGeneration.from_pretrained(checkpoint).to(device)
 
-device = 'cuda'
-model.to(device)
+def generate_translation(batch, model):
+    inputs = tokenizer.encode(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).to(device)
+    outputs = model.generate(inputs)
+    return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
 
-def translate_file(input_path, output_path):
-    # Read the input file
-    with open(input_path, "r", encoding="utf-8") as file:
-        sentences = file.read().splitlines()
+def translate(text_path, batch, output_path):
+    test_sentences = read_file(text_path)
+    # Prepare the input text with the appropriate prefix
+    test_sentences = [f'translate to en: {sentence}' for sentence in test_sentences]
+    data_dict = {"zh": test_sentences}
 
-    translations = []
-    for sentence in sentences:
-        # Prepare the input text with the appropriate prefix
-        input_text = f'translate to en: {sentence}'
-        input_ids = tokenizer.encode(input_text, return_tensors="pt").to(device)
-        # Generate the translation
-        output_ids = model.generate(input_ids)
-        # Decode the output
-        translation = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-        translations.append(translation + "\n")
+    trans_dataset = Dataset.from_dict(data_dict)
+    batch_size = batch or 20
 
-    # Write the translations to the output file
-    with open(output_path, "w", encoding="utf-8") as file:
-        file.writelines(translations)
+    predictions = []
+
+    for i in range(0, len(trans_dataset), batch_size):
+        if i % 100 == 0:
+            print(i)
+            
+        batch = trans_dataset[i: i + batch_size]
+        pred = generate_translation(batch, model)
+        predictions.extend(pred)        
+
+    write_file(output_path, predictions)
+
 
 def get_arguments():
     parser = argparse.ArgumentParser(description="Translate Chinese text to English using utrobinmv/t5_translate_en_ru_zh_small_1024 model.")
-    parser.add_argument('--in_path', required=True, help='Path to the input file containing Chinese text.')
-    parser.add_argument('--out_path', required=True, help='Path to the output file for the English translations.')
+    parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
+    parser.add_argument("-batch", type=int, help="Batch size used during translation")
+    parser.add_argument("-out", help="Output file path", required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = get_arguments()
-    translate_file(args.in_path, args.out_path)
+    translate(args.text, args.batch, args.out)

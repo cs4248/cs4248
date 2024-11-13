@@ -8,6 +8,7 @@ import torch
 import numpy as np 
 
 MAX_INPUT_LENGTH = 64
+MAX_TRANSLATE_LENGTH = 250
 checkpoint = "facebook/nllb-200-distilled-600M"
 metric = evaluate.load("sacrebleu")
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, src_lang="zho_Hans", tgt_lang="eng_Latn")
@@ -86,7 +87,7 @@ def train(text_path, label_path):
     trainer.save_model("nllb.pt") 
 
 def generate_translation(batch, model):
-    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).input_ids.to(device)
+    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_TRANSLATE_LENGTH).input_ids.to(device)
     outputs = model.generate(inputs)
     return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
 

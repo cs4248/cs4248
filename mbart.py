@@ -12,6 +12,7 @@ import os
 load_dotenv()
 
 MAX_INPUT_LENGTH = 64
+MAX_TRANSLATE_LENGTH = 250
 checkpoint = "facebook/mbart-large-50-many-to-many-mmt"
 metric = evaluate.load("sacrebleu")
 tokenizer = MBart50TokenizerFast.from_pretrained(checkpoint, src_lang="zh_CN", tgt_lang="en_XX")
@@ -88,7 +89,7 @@ def train(text_path, label_path):
     trainer.save_model("mbart.pt") 
 
 def generate_translation(batch, model):
-    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=64).input_ids.to(device)
+    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_TRANSLATE_LENGTH).input_ids.to(device)
     outputs = model.generate(inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
     
     return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
