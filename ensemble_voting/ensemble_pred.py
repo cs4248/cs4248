@@ -13,8 +13,8 @@ tokenizers = [
     AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
 ]
 
-tokenizers[1].src_lang = "zh_CN"
-tokenizers[1].tgt_lang = "en_XX"
+tokenizers[1].src_lang = "zho_Hans"
+tokenizers[1].tgt_lang = "eng_Latn"
 
 def predict_sentence_from_model(dataset, model, untranslated_text):
     model_input = dataset.create_model_input(untranslated_text)
