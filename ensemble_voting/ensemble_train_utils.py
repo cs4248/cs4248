@@ -32,11 +32,12 @@ class TrainingDataset(Ds):
         dataset_reduce_scale = reduce the sample size of the dataset. 
         E.g dataset_reduce_scale=5 on sample size 100, basically reduce sample size from 100 to 20.
         '''
-        with open(text_path, "r", encoding="utf-8") as file: 
-            self.untranslated_texts = file.read().splitlines()
-
-        with open(lab_path, "r", encoding="utf-8") as file: 
-            self.best_model_idx_labels = file.read().splitlines()
+        if text_path is not None:
+            with open(text_path, "r", encoding="utf-8") as file: 
+                self.untranslated_texts = file.read().splitlines()
+        if lab_path is not None:
+            with open(lab_path, "r", encoding="utf-8") as file: 
+                self.best_model_idx_labels = file.read().splitlines()
 
         self.model_tokenizers = model_tokenizers
         self.models = models

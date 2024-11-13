@@ -38,8 +38,8 @@ tokenizers = [
     AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
 ]
 
-tokenizers[1].src_lang = "zh_CN"
-tokenizers[1].tgt_lang = "en_XX"
+tokenizers[1].src_lang = "zho_Hans"
+tokenizers[1].tgt_lang = "eng_Latn"
 
 def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None):
     """
