@@ -1,5 +1,4 @@
 import torch
-from utils import read_file
 from torch.utils.data import Dataset as Ds
 
 class EnsembleModel(torch.nn.Module):
@@ -33,8 +32,11 @@ class TrainingDataset(Ds):
         dataset_reduce_scale = reduce the sample size of the dataset. 
         E.g dataset_reduce_scale=5 on sample size 100, basically reduce sample size from 100 to 20.
         '''
-        self.untranslated_texts = read_file(text_path)
-        self.best_model_idx_labels = read_file(lab_path)
+        with open(text_path, "r", encoding="utf-8") as file: 
+            self.best_model_idx_labels = file.read().splitlines()
+
+        with open(lab_path, "r", encoding="utf-8") as file: 
+            self.best_model_idx_labels = file.read().splitlines()
 
         self.model_tokenizers = model_tokenizers
         self.models = models
