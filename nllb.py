@@ -99,6 +99,7 @@ def translate(text_path, use_ft, batch, output_path):
         chosen = "nllb.pt"
     else:
         chosen = checkpoint
+    print(chosen)
 
     model = AutoModelForSeq2SeqLM.from_pretrained(chosen).to(device)
     test_sentences = read_file(text_path)
@@ -123,7 +124,7 @@ def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
     parser.add_argument("-label", help="Label file path containing ideal translated ENGLISH text output")
-    parser.add_argument("-ft", type=bool, help="True to use fine-tuned version else use default checkpoint")
+    parser.add_argument("-ft", action="store_true", help="True to use fine-tuned version else use default checkpoint")
     parser.add_argument("-batch", type=int, help="Batch size used during translation")
     parser.add_argument("-out", help="Output file path")
     return parser.parse_args()
