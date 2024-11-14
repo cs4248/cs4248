@@ -5,6 +5,7 @@ from datasets import Dataset
 import argparse
 import evaluate
 import torch
+import os
 import numpy as np 
 
 MAX_INPUT_LENGTH = 64
@@ -93,6 +94,8 @@ def generate_translation(batch, model):
 
 def translate(text_path, use_ft, batch, output_path):
     if use_ft:
+        if not os.path.exists("nllb.pt"):
+            raise Exception("Requires model to be fine tuned first")
         chosen = "nllb.pt"
     else:
         chosen = checkpoint
