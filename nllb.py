@@ -99,8 +99,7 @@ def translate(text_path, use_ft, batch, output_path):
         chosen = "nllb.pt"
     else:
         chosen = checkpoint
-    print(chosen)
-
+        
     model = AutoModelForSeq2SeqLM.from_pretrained(chosen).to(device)
     test_sentences = read_file(text_path)
     data_dict = {"zh": test_sentences}
