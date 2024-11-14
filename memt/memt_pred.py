@@ -4,10 +4,11 @@ import argparse
 from memt.memt_train_utils import EnsembleModel, TrainingDataset
 from utils import get_device
 
-exit()
 models = [
-    AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
-    AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
+    # AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
+    # AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
+    AutoModelForSeq2SeqLM.from_pretrained("marian.pt"),
+    AutoModelForSeq2SeqLM.from_pretrained("nllb.pt")
 ]
 
 tokenizers = [
