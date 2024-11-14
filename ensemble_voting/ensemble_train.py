@@ -29,8 +29,10 @@ with open('train.zh-en.zh', 'r') as train_moe_text_file, \
             filtered_train_moe_labels_file.write(str(0) + '\n')
 
 models = [
-    AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
-    AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M").to("cuda")
+    # AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
+    # AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M").to("cuda")
+    AutoModelForSeq2SeqLM.from_pretrained("marian.pt").to("cuda"),
+    AutoModelForSeq2SeqLM.from_pretrained("nllb.pt").to("cuda")
 ]
 
 tokenizers = [
@@ -40,6 +42,7 @@ tokenizers = [
 
 tokenizers[1].src_lang = "zho_Hans"
 tokenizers[1].tgt_lang = "eng_Latn"
+
 
 def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None):
     """
