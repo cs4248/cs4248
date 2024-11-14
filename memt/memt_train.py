@@ -10,22 +10,22 @@ from utils import get_device
 # all 5 models, we gotta force it all into 2 numbers only. (Or else cuda will crash xpp)
 
 with open('train.zh-en.zh', 'r') as train_moe_text_file, \
-    open('train_moe_labels.txt','r') as train_moe_labels_file, \
-    open('filtered_train_moe_text.txt', 'w') as filtered_train_moe_text_file, \
-    open('filtered_train_moe_labels.txt', 'w') as filtered_train_moe_labels_file:
+    open('train_memt_labels.txt','r') as train_memt_labels_file, \
+    open('filtered_train_memt_text.txt', 'w') as filtered_train_memt_text_file, \
+    open('filtered_train_memt_labels.txt', 'w') as filtered_train_memt_labels_file:
     
-    for text_line, best_idx in zip(train_moe_text_file, train_moe_labels_file):
+    for text_line, best_idx in zip(train_moe_text_file, train_memt_labels_file):
         best_idx = int(best_idx)
         if not (best_idx == 0 or best_idx == 4):
             continue
 
-        filtered_train_moe_text_file.write(text_line)
+        filtered_train_memt_text_file.write(text_line)
         # nllb
         if best_idx == 4:
-            filtered_train_moe_labels_file.write(str(1) + '\n')
+            filtered_train_memt_labels_file.write(str(1) + '\n')
         # mariant
         else:
-            filtered_train_moe_labels_file.write(str(0) + '\n')
+            filtered_train_memt_labels_file.write(str(0) + '\n')
 
 models = [
     AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
@@ -113,6 +113,6 @@ if __name__ == '__main__':
     device = get_device()
 
     models = [model.to(device) for model in models]
-    dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
+    dataset = TrainingDataset("filtered_train_memt_text.txt", "filtered_train_memt_labels.txt", models, tokenizers)
     train(EnsembleModel(device).to(device), dataset, 2, 0.001, 5, model_path, device=device)
 
