@@ -3,17 +3,17 @@ from torch.utils.data import Dataset as Ds
 from utils import read_file
 
 class EnsembleModel(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, device='cpu'):
         super().__init__()
 
-        self.l1 = torch.nn.LayerNorm(321207).to('cuda')
-        self.l2 = torch.nn.Linear(321207, 2048).to('cuda')
+        self.l1 = torch.nn.LayerNorm(321207).to(device)
+        self.l2 = torch.nn.Linear(321207, 2048).to(device)
         self.l3 = torch.nn.LeakyReLU(0.1)
         self.l4 = torch.nn.Dropout(0.2)
-        self.l5 = torch.nn.Linear(2048, 128).to('cuda')
+        self.l5 = torch.nn.Linear(2048, 128).to(device)
         self.l6 = torch.nn.LeakyReLU(0.1)
         self.l7 = torch.nn.Dropout(0.2)
-        self.l8 = torch.nn.Linear(128, 2).to('cuda')
+        self.l8 = torch.nn.Linear(128, 2).to(device)
 
     def forward(self, x):
         # print(x.shape)

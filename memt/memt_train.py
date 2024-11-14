@@ -43,7 +43,7 @@ tokenizers[1].src_lang = "zho_Hans"
 tokenizers[1].tgt_lang = "eng_Latn"
 
 
-def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None):
+def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None, device='cpu'):
     """
     Complete the training procedure below by specifying the loss function
     and optimizers with the specified learning rate and specified number of epoch.
@@ -61,8 +61,8 @@ def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None)
         running_loss = 0.0
         for step, data in enumerate(data_loader, 0):
             # get the inputs; data is a list of [inputs, labels]
-            untranslated_text = data[0].to('cuda')
-            best_model_idx = data[1].to('cuda')
+            untranslated_text = data[0].to(device)
+            best_model_idx = data[1].to(device)
 
             # zero the parameter gradients
             model.zero_grad()
@@ -114,5 +114,5 @@ if __name__ == '__main__':
 
     models = [model.to(device) for model in models]
     dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
-    train(EnsembleModel().to('cuda'), dataset, 2, 0.001, 5, model_path, device=device)
+    train(EnsembleModel(device).to(device), dataset, 2, 0.001, 5, model_path, device=device)
 

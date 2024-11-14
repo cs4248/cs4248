@@ -19,13 +19,13 @@ tokenizers = [
 tokenizers[1].src_lang = "zho_Hans"
 tokenizers[1].tgt_lang = "eng_Latn"
 
-def predict_sentence_from_model(dataset, model, untranslated_text):
+def predict_sentence_from_model(dataset, model, untranslated_text, device='cpu'):
     model_input = dataset.create_model_input(untranslated_text)
     best_idx = torch.argmax(model(model_input))
     model_chosen = dataset.models[best_idx]
     model_tokenizer_chosen = dataset.model_tokenizers[best_idx]
     
-    inputs = model_tokenizer_chosen(untranslated_text, return_tensors="pt").to("cuda")
+    inputs = model_tokenizer_chosen(untranslated_text, return_tensors="pt").to(device)
 
     outputs = model_chosen.generate(**inputs)
     decoded_outputs = model_tokenizer_chosen.decode(outputs[0], skip_special_tokens=True)
@@ -43,14 +43,13 @@ if __name__ == "__main__":
     model_filename = args.model_path
     test_text_path = args.text
     out_path = args.out
+    device = get_device()
 
     checkpoint = torch.load(model_filename)
     model_state_dict = checkpoint['model_state_dict']
 
-    trained_model = EnsembleModel().to('cuda')
+    trained_model = EnsembleModel(device).to(device)
     trained_model.load_state_dict(model_state_dict)
-
-    device = get_device()
 
     models = [model.to(device) for model in models]
     dataset = TrainingDataset(None, None, models, tokenizers)
