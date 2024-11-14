@@ -66,6 +66,6 @@ def get_arguments():
 if __name__ == "__main__":
     args = get_arguments()
     if args.perm:
-        print(compute_all_permutations_bleu_score(args.lab, args.pred))
+        print(compute_all_permutations_bleu_score(args.label, args.pred))
     else:
-        print(compute_best_bleu_score(args.lab, args.pred))
+        print(compute_best_bleu_score(args.label, args.pred))
