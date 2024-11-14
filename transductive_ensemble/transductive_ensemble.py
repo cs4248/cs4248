@@ -7,6 +7,7 @@ import numpy as np
 import argparse
 import evaluate
 import torch
+import os
 
 MAX_INPUT_LENGTH = 64
 checkpoint = "Helsinki-NLP/opus-mt-zh-en"
@@ -92,6 +93,8 @@ def generate_translation(batch, model):
 
 
 def translate(text_path, batch, output_path):
+    if not os.path.exists("meta.pt"):
+        raise Exception("Requires model to be fine tuned first")
     model = AutoModelForSeq2SeqLM.from_pretrained("meta.pt").to(device)
     batch_size = batch or 20
     predictions = []

@@ -5,7 +5,8 @@ from utils import read_file, write_file, get_device
 import argparse
 import evaluate
 import torch
-import numpy as np 
+import os
+import numpy as np
 
 MAX_INPUT_LENGTH = 64
 MAX_TRANSLATE_LENGTH = 250
@@ -92,6 +93,8 @@ def generate_translation(batch, model):
 
 def translate(text_path, use_ft, batch, output_path):
     if use_ft: 
+        if not os.path.exists("marian.pt"):
+            raise Exception("Requires model to be fine tuned first")
         chosen = "marian.pt"
     else:
         chosen = checkpoint
