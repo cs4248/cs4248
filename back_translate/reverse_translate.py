@@ -9,28 +9,8 @@ from utils import get_device, read_file, write_file
 device = get_device()
 MAX_LENGTH = 500
 
-'''
-class EnglishSentenceDataset(Dataset):
-    def __init__(self, sentences):
-        tokens = tokenizer(
-            sentences,
-            return_tensors="pt",
-            padding=True,
-            truncation=True
-        )
-        self.input = tokens["input_ids"]
-        self.masks = tokens["attention_mask"]
-
-    def __len__(self):
-        return len(self.input)
-
-    def __getitem__(self, idx):
-        return self.input[idx], self.masks[idx]
-'''
-
 # Function to perform translation from English to Chinese
 def translate_to_chinese(model, tokenizer, sentences, batch_size):
-    # dataset = EnglishSentenceDataset(sentences)
     dataset = Dataset.from_dict({"en": sentences})
     dataloader = DataLoader(dataset, batch_size=batch_size)
     tokenize = get_tokenize_function(tokenizer)
@@ -38,8 +18,6 @@ def translate_to_chinese(model, tokenizer, sentences, batch_size):
     decoded_outputs = []
     for batch in dataloader:
         inputs = tokenize(batch).to(device)
-        # tokenized, mask = data
-        # inputs = {"input_ids": tokenized.to(device), "attention_mask": mask.to(device)}
         outputs = model.generate(inputs)
         decoded_outputs += tokenizer.batch_decode(outputs, skip_special_tokens=True)
     return [output + "\n" for output in decoded_outputs]
@@ -77,7 +55,7 @@ def get_tokenize_function(tokenizer):
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-input", help="Path to the input file", required=True)
+    parser.add_argument("-text", help="Path to the input file", required=True)
     parser.add_argument("-out", help="Path to the output file", required=True)
     parser.add_argument("-batch", help="Batch size for prediction", type=int, default=32)
     return parser.parse_args()
@@ -85,5 +63,5 @@ def get_arguments():
 # Translate each file in the list
 if __name__ == "__main__":
     args = get_arguments()
-    translate_file_to_chinese(args.input, args.out, args.batch)
+    translate_file_to_chinese(args.text, args.out, args.batch)
 

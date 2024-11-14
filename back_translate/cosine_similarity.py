@@ -54,12 +54,12 @@ def process_files(input_path, predicted_path, output_path):
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-input", help="Path to the original untranslated file", required=True)
+    parser.add_argument("-text", help="Path to the original untranslated file", required=True)
     parser.add_argument("-pred", help="Path to the reverse translated file", required=True)
     parser.add_argument("-out", help="Path to the output file", required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = get_arguments()
-    process_files(args.input, args.pred, args.out)
+    process_files(args.text, args.pred, args.out)
 
