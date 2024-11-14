@@ -5,7 +5,6 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer
 
-from moe.moe_dataset import MoEDataset
 from utils import get_device, read_file
 
 device = get_device()
@@ -16,7 +15,7 @@ tokenizer = AutoTokenizer.from_pretrained(base_model_checkpoint, return_pt="pt")
 base_model = AutoModel.from_pretrained(base_model_checkpoint).to(device)
 base_model.eval()
 
-# Common tokenizer for all 3 expert model outputs
+# Common tokenizer for the expert model outputs
 output_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
 
 # Hyper parameters
@@ -190,7 +189,7 @@ def test(text_path, output_path, pred_paths, model_path, batch_size):
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-input", help="Text file path containing untranslated Chinese text", required=True)
+    parser.add_argument("-text", help="Text file path containing untranslated Chinese text", required=True)
     parser.add_argument("-pred", nargs="+", help="Prediction file path containing translated English text", required=True)
     parser.add_argument("-label", help="Label file path containing translated English text")
     parser.add_argument("-out", help="Output file path")
@@ -201,7 +200,7 @@ def get_arguments():
 if __name__ == "__main__":
     args = get_arguments()
     if args.label: 
-        train(args.input, args.label, args.pred, args.model, args.batch)
+        train(args.text, args.label, args.pred, args.model, args.batch)
     else: 
-        test(args.input, args.out, args.pred, args.model, args.batch)
+        test(args.text, args.out, args.pred, args.model, args.batch)
 

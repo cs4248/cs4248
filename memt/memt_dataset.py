@@ -3,15 +3,15 @@ from torch.utils.data import Dataset
 
 from utils import compute_single_bleu_score, read_file
 
-class MoEDataset(Dataset):
+class MEMTDataset(Dataset):
     '''
     text_path: str
-        Path to the text file used to generate MoE label file
+        Path to the text file used to generate MEMT label file
         File should contain untranslated CHINESE text
     lab_path: str
-        Path to the MoE label file
+        Path to the MEMT label file
         File should contain numbers between 1 and N, where N is
-        the number of datasets combined to form the MoE dataset
+        the number of datasets combined to form the MEMT dataset
     '''
     def __init__(self, text_path, lab_path, tokenizer):
         self.__init__(read_file(text_path), read_file(lab_path), tokenizer)
@@ -21,10 +21,10 @@ class MoEDataset(Dataset):
         Path to the text file used to generate prediction files
         File should contain untranslated CHINESE text
     pred_paths: list of str
-        List of paths to the prediction files used to generate MoE dataset
+        List of paths to the prediction files used to generate MEMT dataset
         Files should contain translated ENGLISH text
     lab_path: str
-        List of paths to the label files used to generate MoE dataset
+        List of paths to the label files used to generate MEMT dataset
         File should contain translated ENGLISH text
     '''
     def __init__(self, text_path, pred_paths, lab_path, tokenizer):
@@ -59,7 +59,7 @@ lab_paths: list of str
     List of paths to the label files used to generate MoE dataset
     Files should contain translated ENGLISH text
 '''
-def get_raw_moe_dataset(text_paths, lab_path, pred_paths):
+def get_raw_memt_dataset(text_paths, lab_path, pred_paths):
     raw_texts = read_file(text_paths)
     raw_preds = [read_file(pred_path) for pred_path in pred_paths]
     raw_labels = read_file(lab_path)
@@ -82,5 +82,5 @@ def get_arguments():
 
 if __name__ == "__main__":
     args = get_arguments()
-    _, labels = get_raw_moe_dataset(args.text, args.lab, args.pred)
+    _, labels = get_raw_memt_dataset(args.text, args.lab, args.pred)
     write_label_file(args.out, labels)
