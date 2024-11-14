@@ -1,0 +1,8 @@
+evaluate 
+torch --index-url https://download.pytorch.org/whl/cu121
+transformers
+sentencepiece
+protobuf
+sacrebleu
+scikit-learn
+datasets

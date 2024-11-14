@@ -1,21 +1,17 @@
-from transformers import DataCollatorForSeq2Seq, MBartForConditionalGeneration, MBart50TokenizerFast, Trainer, TrainingArguments
+from transformers import DataCollatorForSeq2Seq, AutoModelForSeq2SeqLM, AutoTokenizer, Trainer, TrainingArguments
 from peft import get_peft_model, LoraConfig, TaskType
-from datasets import Dataset
 from utils import read_file, write_file, get_device
-from dotenv import load_dotenv
+from datasets import Dataset
+from itertools import chain
 import numpy as np
 import argparse
 import evaluate
 import torch
-import os 
-
-load_dotenv()
 
 MAX_INPUT_LENGTH = 64
-MAX_TRANSLATE_LENGTH = 250
-checkpoint = "facebook/mbart-large-50-many-to-many-mmt"
+checkpoint = "Helsinki-NLP/opus-mt-zh-en"
 metric = evaluate.load("sacrebleu")
-tokenizer = MBart50TokenizerFast.from_pretrained(checkpoint, src_lang="zh_CN", tgt_lang="en_XX")
+tokenizer = AutoTokenizer.from_pretrained(checkpoint, return_tensors="pt")
 device = get_device()
 
 def tokenize_function(sentences):
@@ -26,7 +22,7 @@ def tokenize_function(sentences):
         "attention_mask": model_inputs["attention_mask"],
         "labels": model_inputs["labels"],
     }
-        
+
 def compute_metrics(eval_pred):
     preds, labels = eval_pred
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
@@ -40,15 +36,16 @@ def preprocess_logits_for_metrics(logits, labels):
     logits = torch.argmax(logits, dim=-1)
     return logits
 
-def train(text_path, label_path):
-    chinese_sentences = read_file(text_path)
-    english_sentences = read_file(label_path)
-    
+def train(text_path, label_paths):
+    multiplier = len(label_paths)
+    chinese_sentences = list(chain.from_iterable([read_file(text_path)] * multiplier))
+    english_sentences = list(chain.from_iterable([read_file(label_path) for label_path in label_paths]))
+
     data_dict = {"zh": chinese_sentences, "en": english_sentences}
     dataset = Dataset.from_dict(data_dict)
     dataset = dataset.map(tokenize_function, batched=True, batch_size=5)
 
-    model = MBartForConditionalGeneration.from_pretrained(checkpoint)
+    model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
     peft_config = LoraConfig(
         r=16,
         lora_alpha=32,
@@ -62,11 +59,11 @@ def train(text_path, label_path):
     print(model.print_trainable_parameters())
 
     training_arguments = TrainingArguments(
-        output_dir="mbart_args.pt",
-        learning_rate=1e-5,
+        output_dir="meta_args.pt",
+        learning_rate=1e-3,
         per_device_train_batch_size=32,
         per_device_eval_batch_size=32,
-        num_train_epochs=5,
+        num_train_epochs=10,
         fp16=True,
         eval_strategy="epoch",
         save_strategy="epoch",
@@ -86,23 +83,16 @@ def train(text_path, label_path):
     )
 
     trainer.train()
-    trainer.save_model("mbart.pt") 
+    trainer.save_model("meta.pt") 
 
 def generate_translation(batch, model):
-    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_TRANSLATE_LENGTH).input_ids.to(device)
-    outputs = model.generate(inputs, forced_bos_token_id=tokenizer.lang_code_to_id["en_XX"])
-    
+    inputs = tokenizer(batch["zh"], return_tensors="pt", padding=True, truncation=True, max_length=MAX_INPUT_LENGTH).input_ids.to(device)
+    outputs = model.generate(inputs)
     return [tokenizer.decode(output, skip_special_tokens=True) + "\n" for output in outputs]
 
-def translate(text_path, use_ft, batch, output_path):
-    if use_ft:
-        if not os.path.exists("mbart.pt"):
-            raise Exception("Requires model to be fine tuned first")
-        chosen = "mbart.pt"
-    else:
-        chosen = checkpoint
 
-    model = MBartForConditionalGeneration.from_pretrained(chosen).to(device)
+def translate(text_path, batch, output_path):
+    model = AutoModelForSeq2SeqLM.from_pretrained("meta.pt").to(device)
     batch_size = batch or 20
     predictions = []
 
@@ -113,19 +103,19 @@ def translate(text_path, use_ft, batch, output_path):
         
     for i in range(0, len(trans_dataset), batch_size):
         if i % 100 == 0:
-            print(i, flush=True)
+            print(i)
             
         batch = trans_dataset[i: i + batch_size]
         pred = generate_translation(batch, model)
         predictions.extend(pred)
 
     write_file(output_path, predictions)
+
     
 def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
-    parser.add_argument("-label", help="Label file path containing ideal translated ENGLISH text output")
-    parser.add_argument("-ft", type=bool, help="True to use fine-tuned version else use default checkpoint")
+    parser.add_argument("-label", nargs="+", help="List of prediction file paths containing translated ENGLISH text")
     parser.add_argument("-batch", type=int, help="Batch size used during translation")
     parser.add_argument("-out", help="Output file path")
     return parser.parse_args()
@@ -135,4 +125,4 @@ if __name__ == "__main__":
     if args.label:
         train(args.text, args.label)
     else:
-        translate(args.text, args.ft, args.batch, args.out)
+        translate(args.text, args.batch, args.out)
