@@ -28,10 +28,10 @@ with open('train.zh-en.zh', 'r') as train_moe_text_file, \
             filtered_train_moe_labels_file.write(str(0) + '\n')
 
 models = [
-    # AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
-    # AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
-    AutoModelForSeq2SeqLM.from_pretrained("marian.pt"),
-    AutoModelForSeq2SeqLM.from_pretrained("nllb.pt")
+    AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
+    AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
+    # AutoModelForSeq2SeqLM.from_pretrained("marian.pt"),
+    # AutoModelForSeq2SeqLM.from_pretrained("nllb.pt")
 ]
 
 tokenizers = [
