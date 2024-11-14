@@ -104,7 +104,7 @@ def train(model, dataset, batch_size, learning_rate, num_epoch, model_path=None,
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', help='path to save the model at', required=True)
+    parser.add_argument('-model_path', help='path to save the model at', required=True)
     return parser.parse_args()
     
 if __name__ == '__main__':
