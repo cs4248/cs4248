@@ -59,7 +59,7 @@ def compute_all_permutations_bleu_score(lab_path, pred_paths):
 def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-perm", help="Flag for whether to generate all permutations", action="store_true")
-    parser.add_argument("-lab", help="Label file path containing ideal translated ENGLISH text output", required=True)
+    parser.add_argument("-label", help="Label file path containing ideal translated ENGLISH text output", required=True)
     parser.add_argument("-pred", nargs="+", help="List of prediction file paths containing translated ENGLISH text", required=True)
     return parser.parse_args()
 
