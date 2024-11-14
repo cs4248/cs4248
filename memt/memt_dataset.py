@@ -75,12 +75,12 @@ def write_label_file(file_path, labels):
 def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-text", help="Text file path containing untranslated CHINESE text", required=True)
-    parser.add_argument("-lab", help="Label file path containing ideal translated ENGLISH text output", required=True)
+    parser.add_argument("-label", help="Label file path containing ideal translated ENGLISH text output", required=True)
     parser.add_argument("-pred", nargs="+", help="List of prediction file paths containing translated ENGLISH text", required=True)
     parser.add_argument("-out", help="Output file path", required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = get_arguments()
-    _, labels = get_raw_memt_dataset(args.text, args.lab, args.pred)
+    _, labels = get_raw_memt_dataset(args.text, args.label, args.pred)
     write_label_file(args.out, labels)
