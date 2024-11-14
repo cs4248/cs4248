@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset as Ds
+from utils import read_file
 
 class EnsembleModel(torch.nn.Module):
     def __init__(self):
@@ -29,11 +30,9 @@ class EnsembleModel(torch.nn.Module):
 class TrainingDataset(Ds):
     def __init__(self, text_path, lab_path, models, model_tokenizers):
         if text_path is not None:
-            with open(text_path, "r", encoding="utf-8") as file: 
-                self.untranslated_texts = file.read().splitlines()
+            self.untranslated_texts = read_file(text_path)
         if lab_path is not None:
-            with open(lab_path, "r", encoding="utf-8") as file: 
-                self.best_model_idx_labels = file.read().splitlines()
+            self.best_model_idx_labels = read_file(lab_path)
 
         self.model_tokenizers = model_tokenizers
         self.models = models

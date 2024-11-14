@@ -2,10 +2,11 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MBartForConditionalGeneration, MBart50TokenizerFast
 import argparse
 from ensemble_train_utils import EnsembleModel, TrainingDataset
+from utils import get_device
 
 models = [
-    AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
-    AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M").to("cuda")
+    AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
+    AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
 ]
 
 tokenizers = [
@@ -30,16 +31,16 @@ def predict_sentence_from_model(dataset, model, untranslated_text):
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', help='path to the model', required=True)
-    parser.add_argument('--test_text_path', help='path to the test text file', required=True)
-    parser.add_argument('--out_path', help='path to output the predictions to', required=True)
+    parser.add_argument('-model_path', help='path to the model', required=True)
+    parser.add_argument('-text', help='Text file path containing untranslated CHINESE text', required=True)
+    parser.add_argument('-out', help='Output file pat', required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = get_arguments()
     model_filename = args.model_path
-    test_text_path = args.test_text_path
-    out_path = args.out_path
+    test_text_path = args.text
+    out_path = args.out
 
     checkpoint = torch.load(model_filename)
     model_state_dict = checkpoint['model_state_dict']
@@ -47,6 +48,9 @@ if __name__ == "__main__":
     trained_model = EnsembleModel().to('cuda')
     trained_model.load_state_dict(model_state_dict)
 
+    device = get_device()
+
+    models = [model.to(device) for model in models]
     dataset = TrainingDataset(None, None, models, tokenizers)
 
     with open(test_text_path,'r') as train_moe_labels_file, open(out_path, 'w') as filtered_train_moe_labels_file:

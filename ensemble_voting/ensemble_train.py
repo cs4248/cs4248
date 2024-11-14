@@ -1,11 +1,10 @@
 import argparse
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MBartForConditionalGeneration, MBart50TokenizerFast
-from datasets import Dataset
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import torch
 from ensemble_train_utils import EnsembleModel, TrainingDataset
-from torch.utils.data import Subset
 import datetime
 from torch.utils.data import DataLoader
+from utils import get_device
 
 # since this file only test 2 models together, and train_moe_labels.txt contains numbers from
 # all 5 models, we gotta force it all into 2 numbers only. (Or else cuda will crash xpp)
@@ -29,10 +28,10 @@ with open('train.zh-en.zh', 'r') as train_moe_text_file, \
             filtered_train_moe_labels_file.write(str(0) + '\n')
 
 models = [
-    # AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en").to("cuda"),
-    # AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M").to("cuda")
-    AutoModelForSeq2SeqLM.from_pretrained("marian.pt").to("cuda"),
-    AutoModelForSeq2SeqLM.from_pretrained("nllb.pt").to("cuda")
+    # AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-zh-en"),
+    # AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
+    AutoModelForSeq2SeqLM.from_pretrained("marian.pt"),
+    AutoModelForSeq2SeqLM.from_pretrained("nllb.pt")
 ]
 
 tokenizers = [
@@ -111,12 +110,9 @@ def get_arguments():
 if __name__ == '__main__':
     args = get_arguments()
     model_path = args.model_path
+    device = get_device()
 
-    # Init training data
-    # subset_size = 7100
+    models = [model.to(device) for model in models]
     dataset = TrainingDataset("filtered_train_moe_text.txt", "filtered_train_moe_labels.txt", models, tokenizers)
-    # indices = list(range(subset_size))  # Define a list of indices
-    # subset = Subset(dataset, indices)
-
-    train(EnsembleModel().to('cuda'), dataset, 2, 0.001, 5, model_path)
+    train(EnsembleModel().to('cuda'), dataset, 2, 0.001, 5, model_path, device=device)
 
