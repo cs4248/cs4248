@@ -35,7 +35,7 @@ def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-model_path', help='path to the model', required=True)
     parser.add_argument('-text', help='Text file path containing untranslated CHINESE text', required=True)
-    parser.add_argument('-out', help='Output file pat', required=True)
+    parser.add_argument('-out', help='Output file path', required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -56,6 +56,6 @@ if __name__ == "__main__":
 
     with open(test_text_path,'r') as train_moe_labels_file, open(out_path, 'w') as filtered_train_moe_labels_file:
         for i, best_idx in enumerate(train_moe_labels_file):
-            pred = predict_sentence_from_model(dataset, trained_model, best_idx)
+            pred = predict_sentence_from_model(dataset, trained_model, best_idx, device=device)
             filtered_train_moe_labels_file.write(pred + '\n')
             print(i)
